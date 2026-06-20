@@ -1,19 +1,37 @@
 import { useState, useEffect } from "react"
-import { MdDashboard , MdPointOfSale , MdStorage } from "react-icons/md";
+import { MdDashboard, MdPointOfSale, MdStorage } from "react-icons/md";
 import { CiClock2 } from "react-icons/ci";
-function Sidebar({ activePage, setActivePage }) {
+import { auth, db } from "../firebase";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { useNavigate, useLocation  } from 'react-router-dom'
+
+function Sidebar({userData}) {
     const [lowProducts, setLowProducts] = useState(0)
+    const navigate = useNavigate()
+    const location = useLocation()
 
+    //getting products with low quantity for current user from the firestore and listen to changes in real time
     useEffect(() => {
-        const products = JSON.parse(localStorage.getItem('products') || '[]')
-        setLowProducts(products.filter(p => p.status === 'ناقص').length)
-    }, [activePage])
+        const user = auth.currentUser
+        if (!user) return
 
-    const navItem = (label, page, icon, badge) => (
-        <button onClick={() => setActivePage(page)} style={{
+        const q = query(collection(db, "products"), where("ownerId", "==", user.uid))
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const items = snapshot.docs.map(docSnap => docSnap.data())
+            setLowProducts(items.filter(p => p.status === 'ناقص').length)
+        })
+
+        return () => unsubscribe()
+    }, [])
+
+    const navItem = (label, path, icon, badge) => (
+        <button onClick={() => {
+            navigate(path)
+        }} style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
-            backgroundColor: activePage === page ? "#1f2e1f" : "transparent",
-            color: activePage === page ? "#22c97a" : "#aaa",
+            backgroundColor: location.pathname === path ? "#1f2e1f" : "transparent",
+            color: location.pathname === path ? "#22c97a" : "#aaa",
             border: "none", borderRadius: "8px", padding: "10px 14px",
             cursor: "pointer", fontFamily: "cairo, sans-serif", fontSize: "15px",
             width: "100%", textAlign: "right"
@@ -29,7 +47,7 @@ function Sidebar({ activePage, setActivePage }) {
                 <span>{label}</span>
             </div>
             <span style={{ fontSize: "16px" }}>{icon}</span>
-        </button>
+        </button >
     )
 
     return (
@@ -41,24 +59,26 @@ function Sidebar({ activePage, setActivePage }) {
             {/* Logo */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", padding: "0 4px" }}>
                 <div>
-                    <h2 style={{ color: 'white', margin: 0, fontFamily: "cairo, sans-serif", fontSize: "20px" }}>تجارة</h2>
-                    <p style={{ color: "#555", margin: 0, fontSize: "11px", fontFamily: "cairo, sans-serif" }}>نظام إدارة البيزنس</p>
+                    <h2 style={{ color: 'white', margin: 0, fontFamily: "cairo, sans-serif", fontSize: "20px" }}>
+                        {userData?.businessName || "تجارة"}
+                    </h2>
+                    <p style={{ color: "#555", margin: 0, fontSize: "11px", fontFamily: "cairo, sans-serif" }}>
+                        {userData?.fullName || "نظام إدارة البيزنس"}
+                    </p>
                 </div>
                 <div style={{ width: "40px", height: "40px", backgroundColor: "#22c97a22", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>📦</div>
             </div>
 
             {/* الرئيسية */}
             <p style={{ color: "#444", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "8px 4px 4px", textAlign: "right" }}>الرئيسية</p>
-            {navItem("الداشبورد", "Dashboard", <MdDashboard />)}
+            {navItem("الداشبورد", "/dashboard", <MdDashboard />)}
 
             {/* العمليات اليومية */}
             <p style={{ color: "#444", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "12px 4px 4px", textAlign: "right" }}>العمليات اليومية</p>
-            {navItem("مبيعات اليوم", "Sales", <MdPointOfSale />)}
-            {navItem("المخزن", "Storage", <MdStorage />, lowProducts)}
-            {navItem("المصروفات", "Expenses", <CiClock2 />)}
+            {navItem("مبيعات اليوم", "/sales", <MdPointOfSale />)}
+            {navItem("المخزن", "/storage", <MdStorage />, lowProducts)}
+            {navItem("المصروفات", "/expenses", <CiClock2 />)}
 
-            {/* التقارير */}
-            {/* <p style={{ color: "#444", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "12px 4px 4px", textAlign: "right" }}>التقارير</p> */}
         </div>
     )
 }

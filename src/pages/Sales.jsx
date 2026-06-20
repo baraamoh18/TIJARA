@@ -1,20 +1,113 @@
 import Header from "../components/Header";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { auth, db } from "../firebase";
+import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, increment } from "firebase/firestore";
+
 
 function Sales() {
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   const currentDate = new Date().toLocaleDateString('ar-EG', options);
 
-  const products = JSON.parse(localStorage.getItem('products') || '[]')
-  const [quantities, setQuantities] = useState(
-    products.reduce((acc, p) => ({ ...acc, [p.name]: 0 }), {})
-  )
-
-  const totalRevenue = products.reduce((t, p) => t + (quantities[p.name] * p.sellingPrice), 0)
-  const totalCost = products.reduce((t, p) => t + (quantities[p.name] * p.buyingPrice), 0)
-  const totalProfit = totalRevenue - totalCost
+  const [products, setProducts] = useState([])
+  const [quantities, setQuantities] = useState({})
   const [saved, setSaved] = useState(false)
-  
+  const [totalRevenue, setTotalRevenue] = useState(0)
+  const [totalCost, setTotalCost] = useState(0)
+  const [totalProfit, setTotalProfit] = useState(0)
+
+  //getting products for current user from the firestore and listen to changes in real time
+  useEffect(() => {
+    const user = auth.currentUser
+    if (!user) return
+
+    const q = query(collection(db, "products"), where("ownerId", "==", user.uid))
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }))
+      setProducts(items)
+      setQuantities(prev => {
+        const updated = { ...prev }
+        items.forEach(p => {
+          if (!(p.id in updated)) updated[p.id] = 0
+        })
+        return updated
+      })
+    })
+
+    return () => unsubscribe()
+  }, [])
+
+  //getting total revenue, cost and profit for the current day
+  useEffect(() => {
+    const user = auth.currentUser
+    if (!user) return
+
+    const today = new Date().toISOString().split('T')[0]
+
+    const q = query(
+      collection(db, "sales"),
+      where("ownerId", "==", user.uid),
+      where("date", "==", today)
+    )
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let revenue = 0, cost = 0, profit = 0
+      snapshot.docs.forEach(doc => {
+        const data = doc.data()
+        revenue += data.revenue || 0
+        cost += data.quantitySold * data.buyingPrice || 0
+        profit += data.profit || 0
+      })
+      setTotalRevenue(revenue)
+      setTotalCost(cost)
+      setTotalProfit(profit)
+    })
+
+    return () => unsubscribe()
+  }, [])
+
+  // function to save today's sales to firestore and update product quantities
+  const saveSales = async () => {
+    const user = auth.currentUser
+    if (!user) return
+
+    const soldEntries = products
+      .map(p => ({ product: p, soldQuantity: quantities[p.id] || 0 }))
+      .filter(entry => entry.soldQuantity > 0)
+
+    if (soldEntries.length === 0) {
+      alert('من فضلك أدخل كمية مباعة لمنتج واحد على الأقل')
+      return
+    }
+    //promise to update stock and record sale for each sold product
+    //promise mean that we will wait for all the promises to resolve before setting saved to true
+    await Promise.all(soldEntries.map(({ product: p, soldQuantity }) => {
+      const updateStock = updateDoc(doc(db, "products", p.id), {
+        quantity: increment(-soldQuantity)
+      })
+
+      const recordSale = addDoc(collection(db, "sales"), {
+        ownerId: user.uid,
+        productId: p.id,
+        productName: p.name,
+        quantitySold: soldQuantity,
+        sellingPrice: p.sellingPrice,
+        buyingPrice: p.buyingPrice,
+        revenue: soldQuantity * p.sellingPrice,
+        profit: soldQuantity * (p.sellingPrice - p.buyingPrice),
+        date: new Date().toISOString().split('T')[0],
+        createdAt: new Date()
+      })
+
+      return Promise.all([updateStock, recordSale])
+    }))
+
+    setSaved(true)
+  }
+
   return (
     <>
       <Header title="مبيعات اليوم" extraContent={<span></span>} />
@@ -76,23 +169,7 @@ function Sales() {
         <div style={{ display: "flex", gap: "12px", padding: "0 28px", marginBottom: "8px", fontFamily: "cairo, sans-serif", fontSize: "14px", flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <p style={{ margin: 0, color: "#f2f2f2", fontFamily: "cairo, sans-serif", fontSize: "18px", fontWeight: "800" }}>كم منتج تم بيعه اليوم</p>
           <div style={{ display: "flex", gap: "12px" }}>
-            <button onClick={() => {
-              setQuantities(products.reduce((acc, p) => ({ ...acc, [p.name]: 0 }), {}));
-              setSaved(false);
-            }} style={{
-              backgroundColor: "#1e1e1e", color: "#a0a0a0",
-              border: "1px solid #ffffff22", borderRadius: "8px",
-              padding: "8px 16px", cursor: "pointer",
-              fontFamily: "cairo, sans-serif", fontSize: "13px", fontWeight: "600"
-            }}>مسح الكل</button>
-
-            <button onClick={() => {
-              setSaved(true);
-              localStorage.setItem('products', JSON.stringify(products.map(p => {
-                const soldQuantity = quantities[p.name]
-                return { ...p, quantity: p.quantity - soldQuantity }
-              })));
-            }} style={{
+            <button onClick={saveSales} style={{
               backgroundColor: "#22c97a", color: "#000",
               border: "none", borderRadius: "8px",
               padding: "8px 16px", cursor: "pointer",
@@ -108,8 +185,8 @@ function Sales() {
             لا يوجد منتجات في المخزن - اضف بعض المنتجات من صفحة المخزن لبدء تسجيل المبيعات
           </p>
         ) :
-          products.map((p, i) => (
-            <div key={i} style={{
+          products.map((p) => (
+            <div key={p.id} style={{
               background: "#1e1e1e", border: "1px solid #ffffff14",
               borderRadius: "12px", padding: "12px 14px",
               marginBottom: "8px", display: "grid",
@@ -126,9 +203,10 @@ function Sales() {
               <div style={{ textAlign: "center" }}>
                 <input
                   type="number" min="0"
-                  value={quantities[p.name]}
+                  value={quantities[p.id] || 0}
                   onChange={(e) => {
-                    setQuantities({ ...quantities, [p.name]: Number(e.target.value) });
+                    const val = Number(e.target.value)
+                    setQuantities({ ...quantities, [p.id]: val > p.quantity ? p.quantity : val });
                     setSaved(false);
                   }}
                   style={{
@@ -144,18 +222,18 @@ function Sales() {
               {/* إيراد */}
               <div style={{ textAlign: "center", minWidth: "60px" }}>
                 <p style={{ color: "#585858", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "0 0 3px" }}>الإيراد</p>
-                {quantities[p.name] === 0 ?
+                {(quantities[p.id] || 0) === 0 ?
                   <p style={{ color: "#585858", fontSize: "14px", margin: 0 }}>—</p> :
-                  <p style={{ color: "#f2f2f2", fontSize: "14px", fontWeight: "700", margin: 0, fontFamily: "cairo, sans-serif" }}>{quantities[p.name] * p.sellingPrice} ج</p>
+                  <p style={{ color: "#f2f2f2", fontSize: "14px", fontWeight: "700", margin: 0, fontFamily: "cairo, sans-serif" }}>{quantities[p.id] * p.sellingPrice} ج</p>
                 }
               </div>
 
               {/* ربح */}
               <div style={{ textAlign: "center", minWidth: "60px" }}>
                 <p style={{ color: "#585858", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "0 0 3px" }}>الربح</p>
-                {quantities[p.name] === 0 ?
+                {(quantities[p.id] || 0) === 0 ?
                   <p style={{ color: "#585858", fontSize: "14px", margin: 0 }}>—</p> :
-                  <p style={{ color: "#22c97a", fontSize: "14px", fontWeight: "700", margin: 0, fontFamily: "cairo, sans-serif" }}>{quantities[p.name] * (p.sellingPrice - p.buyingPrice)} ج</p>
+                  <p style={{ color: "#22c97a", fontSize: "14px", fontWeight: "700", margin: 0, fontFamily: "cairo, sans-serif" }}>{quantities[p.id] * (p.sellingPrice - p.buyingPrice)} ج</p>
                 }
               </div>
             </div>

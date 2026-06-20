@@ -1,0 +1,125 @@
+
+.signup-container {
+  min-height: 100vh;
+  background: #0f0f0f;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  direction: rtl;
+  font-family: "Cairo", sans-serif; 
+}
+
+.signup-container h1 {
+  font-size: 29px;
+  font-weight: 500;
+  color: #f2f2f2;
+  margin: 0 0 28px;
+  text-align: center;
+}
+
+.signup-container > p {
+  font-size: 20px;
+  color: #585858;
+  margin: 0 0 28px;
+  text-align: center;
+}
+
+.signup-container form {
+  background: #161616;
+  border: 0.5px solid #ffffff22;
+  border-radius: var(--border-radius-lg, 16px);
+  padding: 32px;
+  width: 500px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.signup-container form > div {
+  margin-bottom: 14px;
+}
+
+.signup-container label {
+  display: block;
+  font-size: 17px;
+  color: #a0a0a0;
+  margin-bottom: 6px;
+  text-align: right;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-icon svg {
+  position: absolute;
+  right: 7px;
+  font-size: 24px;
+  color: #585858;
+  pointer-events: none;
+}
+
+.input-with-icon input {
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  border-radius: var(--border-radius-md, 10px);
+  border: 0.5px solid #ffffff22;
+  background: #1e1e1e;
+  color: #f2f2f2;
+  font-size: 17px;
+  font-family: "Cairo", sans-serif;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.input-with-icon input::placeholder {
+  color: #585858;
+}
+
+.input-with-icon input:focus {
+  border-color: #22c97a;
+}
+
+/* زرار إنشاء الحساب */
+.signup-container form > button[type="submit"] {
+  width: 100%;
+  padding: 11px;
+  border-radius: var(--border-radius-md, 10px);
+  border: none;
+  background: #22c97a;
+  color: #000;
+  font-weight: 500;
+  font-size: 17px;
+  font-family: "Cairo", sans-serif;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: opacity 0.15s ease;
+}
+
+.signup-container form > button[type="submit"]:hover {
+  opacity: 0.9;
+}
+
+.signup-container > p[style] {
+  text-align: center;
+}
+
+/* زرار "لديك حساب؟ تسجيل الدخول" */
+.signup-container > button {
+  background: none;
+  border: none;
+  color: #22c97a;
+  font-size: 17px;
+  font-family: "Cairo", sans-serif;
+  cursor: pointer;
+  margin-top: 16px;
+}
+
+.signup-container > button:hover {
+  text-decoration: underline;
+}

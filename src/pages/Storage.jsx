@@ -1,45 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Statics from "../components/statics";
 import Header from "../components/Header";
+import { auth, db } from "../firebase";
+import {
+    collection, addDoc, updateDoc, deleteDoc,
+    doc, query, where, onSnapshot
+} from "firebase/firestore";
+import { thStyles, generalStyles, inputStyle, buttonColor } from "./storageStyles.js";
 
-const buttonColor = "#22c97a"
-
-const inputStyle = {
-    backgroundColor: "#0d0d0d",
-    border: "1px solid #2a2a2a",
-    padding: "10px 12px",
-    borderRadius: "8px",
-    color: "white",
-    font: "14px cairo, sans-serif",
-    width: "100%",
-    boxSizing: "border-box",
-    outline: "none"
-}
-
-const generalStyles = {
-    border: "none",
-    borderBottom: "1px solid #1f1f1f",
-    padding: "14px 16px",
-    color: "#ccc",
-    fontSize: "14px",
-    fontFamily: "cairo, sans-serif",
-    textAlign: "right"
-}
-
-const thStyles = {
-    ...generalStyles,
-    backgroundColor: "#111",
-    color: "#888",
-    fontSize: "17px",
-    fontWeight: "600",
-    letterSpacing: "0.5px"
-}
 
 function Storage() {
-    const [products, setProducts] = useState(() => {
-        const saved = localStorage.getItem('products')
-        return saved ? JSON.parse(saved) : []
-    })
+    const [products, setProducts] = useState([])
     const [name, setName] = useState('')
     const [quantity, setQuantity] = useState('')
     const [buyingPrice, setBuyingPrice] = useState('')
@@ -47,14 +18,38 @@ function Storage() {
     const [unit, setUnit] = useState('')
     const [minimumQuantity, setMinimumQuantity] = useState('')
     const [showModal, setShowModal] = useState(false)
-    const [editIndex, setEditIndex] = useState(null)
+    const [editId, setEditId] = useState(null)
 
-    const addProduct = () => {
+    //getting products for current user from the firestore and listen to changes in real time
+    useEffect(() => {
+        const user = auth.currentUser
+        if (!user) return
+
+        const q = query(collection(db, "products"), where("ownerId", "==", user.uid))
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const items = snapshot.docs.map(docSnap => ({
+                id: docSnap.id,
+                ...docSnap.data()
+            }))
+            setProducts(items)
+        })
+
+        return () => unsubscribe()
+    }, [])
+
+    // Function to add or update a product in Firestore
+    const addProduct = async () => {
         if (!name || !quantity || !buyingPrice || !sellingPrice || !unit || !minimumQuantity) {
             alert('يرجى ملء جميع الحقول')
             return
         }
-        const newProduct = {
+
+        const user = auth.currentUser
+        if (!user) return
+
+        const productData = {
+            ownerId: user.uid,
             name, quantity: Number(quantity),
             buyingPrice: Number(buyingPrice),
             sellingPrice: Number(sellingPrice),
@@ -64,51 +59,45 @@ function Storage() {
             unit
         }
 
-        let newProducts
-        if (editIndex !== null) {
-            newProducts = products.map((p, i) => i === editIndex ? newProduct : p)
-            setEditIndex(null)
+        if (editId !== null) {
+            await updateDoc(doc(db, "products", editId), productData)
+            setEditId(null)
         } else {
-            newProducts = [...products, newProduct]
+            await addDoc(collection(db, "products"), productData)
         }
 
-        setProducts(newProducts)
-        localStorage.setItem('products', JSON.stringify(newProducts))
         setName(''); setQuantity(''); setBuyingPrice('')
         setSellingPrice(''); setUnit(''); setMinimumQuantity('')
         setShowModal(false)
     }
 
-    const totalValue = products.reduce((t, p) => t + p.productTotalPrice, 0)
+    const totalValue = products.reduce((t, p) => t + (p.quantity * p.buyingPrice), 0)
     const lowProducts = products.filter(p => p.status === 'ناقص').length
 
-    const deleteItem = (index) => {
-        const updatedProducts = products.filter((_, i) => i !== index)
-        setProducts(updatedProducts)
-        localStorage.setItem('products', JSON.stringify(updatedProducts))
+    const deleteItem = async (id) => {
+        await deleteDoc(doc(db, "products", id))
     }
 
-    const modifyItem = (index) => {
-        const p = products[index]
-        setName(p.name);
-        setQuantity(p.quantity);
-        setBuyingPrice(p.buyingPrice);
-        setSellingPrice(p.sellingPrice);
-        setUnit(p.unit);
-        setMinimumQuantity(p.minimumQuantity);
-        setEditIndex(index)
+    const modifyItem = (product) => {
+        setName(product.name);
+        setQuantity(product.quantity);
+        setBuyingPrice(product.buyingPrice);
+        setSellingPrice(product.sellingPrice);
+        setUnit(product.unit);
+        setMinimumQuantity(product.minimumQuantity);
+        setEditId(product.id)
         setShowModal(true)
     }
 
     return (
         <>
-            <Header title="المخزن" buttonText="+ إضافة منتج" onButtonClick={() => { setEditIndex(null); setShowModal(true) }} />
+            <Header title="المخزن" buttonText="+ إضافة منتج" onButtonClick={() => { setEditId(null); setShowModal(true) }} />
 
             {/* Stats */}
             <div style={{ display: "flex", gap: "16px", justifyContent: "space-around", width: "94%", margin: "20px auto", borderRadius: "12px" }}>
-                <Statics title="إجمالي المنتجات" value={products.length} valueColor={"white"}/>
-                <Statics title="إجمالي قيمة المخزن" value={totalValue.toLocaleString() + " جنيه"} valueColor={"white"} />
-               <Statics title="منتجات قليلة" value={lowProducts} valueColor={lowProducts > 0 ? "#cb6262" : "gray"} />
+                <Statics title="إجمالي المنتجات" value={products.length} valueColor={"white"} />
+                <Statics title="إجمالي قيمة المخزن" value={totalValue + " جنيه"} valueColor={"white"} />
+                <Statics title="منتجات قليلة" value={lowProducts} valueColor={lowProducts > 0 ? "#cb6262" : "gray"} />
             </div>
 
             {/* Table */}
@@ -130,14 +119,14 @@ function Storage() {
                                 </td>
                             </tr>
                         ) : products.map((p, i) => (
-                            <tr key={i} style={{ backgroundColor: i % 2 === 0 ? "#0f0f0f" : "#111" }}>
+                            <tr key={p.id} style={{ backgroundColor: i % 2 === 0 ? "#0f0f0f" : "#111" }}>
                                 <td style={generalStyles}>{p.name}</td>
                                 <td style={generalStyles}>{p.quantity} {p.unit}</td>
                                 <td style={generalStyles}>{p.buyingPrice}ج / {p.unit}</td>
                                 <td style={generalStyles}>{p.sellingPrice}ج / {p.unit}</td>
                                 <td style={generalStyles}>{p.unit}</td>
                                 <td style={generalStyles}>{p.minimumQuantity} {p.unit}</td>
-                                <td style={generalStyles}>{p.productTotalPrice.toLocaleString()}ج / {p.unit}</td>
+                                <td style={generalStyles}>{p.productTotalPrice}ج / {p.unit}</td>
                                 <td style={generalStyles}>
                                     <span style={{
                                         backgroundColor: p.status === 'ناقص' ? '#3a1a1a' : '#0f2a1a',
@@ -151,7 +140,7 @@ function Storage() {
                                         border: "1px solid #ffffff22", borderRadius: "8px",
                                         padding: "8px 16px", cursor: "pointer",
                                         fontFamily: "cairo, sans-serif", fontSize: "13px", fontWeight: "600", marginLeft: "8px"
-                                    }} onClick={() => modifyItem(i)}
+                                    }} onClick={() => modifyItem(p)}
                                         onMouseEnter={(e) => { e.target.style.backgroundColor = "#000000"; e.target.style.color = "white" }}
                                         onMouseLeave={(e) => { e.target.style.backgroundColor = "#1e1e1e"; e.target.style.color = "#a0a0a0" }}>
                                         تعديل
@@ -161,7 +150,7 @@ function Storage() {
                                         border: "1px solid #ffffff22", borderRadius: "8px",
                                         padding: "8px 16px", cursor: "pointer",
                                         fontFamily: "cairo, sans-serif", fontSize: "13px", fontWeight: "600"
-                                    }} onClick={() => deleteItem(i)}
+                                    }} onClick={() => deleteItem(p.id)}
                                         onMouseEnter={(e) => { e.target.style.backgroundColor = "#e05555"; e.target.style.color = "white" }}
                                         onMouseLeave={(e) => { e.target.style.backgroundColor = "#1e1e1e"; e.target.style.color = "#a0a0a0" }}>
                                         حذف
@@ -185,7 +174,7 @@ function Storage() {
                         display: "grid", gap: "14px", gridTemplateColumns: "1fr 1fr"
                     }}>
                         <h3 style={{ color: "white", gridColumn: "1 / -1", textAlign: "right", margin: 0, fontFamily: "cairo, sans-serif" }}>
-                            {editIndex !== null ? 'تعديل منتج' : 'إضافة منتج جديد'}
+                            {editId !== null ? 'تعديل منتج' : 'إضافة منتج جديد'}
                         </h3>
 
                         {[
@@ -206,12 +195,12 @@ function Storage() {
                             <button style={{
                                 backgroundColor: "#1e1e1e", color: "#aaa", padding: "10px 20px",
                                 border: "1px solid #333", borderRadius: "8px", cursor: "pointer", fontFamily: "cairo, sans-serif"
-                            }} onClick={() => { setShowModal(false); setEditIndex(null) }}>إلغاء</button>
+                            }} onClick={() => { setShowModal(false); setEditId(null) }}>إلغاء</button>
                             <button style={{
                                 backgroundColor: buttonColor, color: "#000", padding: "10px 24px",
                                 border: "none", borderRadius: "8px", cursor: "pointer", fontFamily: "cairo, sans-serif", fontWeight: "700"
                             }} onClick={addProduct}>
-                                {editIndex !== null ? 'حفظ التعديلات' : 'إضافة المنتج'}
+                                {editId !== null ? 'حفظ التعديلات' : 'إضافة المنتج'}
                             </button>
                         </div>
                     </div>
