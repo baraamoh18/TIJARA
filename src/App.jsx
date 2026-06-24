@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { auth, db } from './firebase'
-import { doc, getDoc } from 'firebase/firestore'
-import { BrowserRouter, Routes, Route ,Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom'
+import { authAPI } from './api'
 import Sidebar from './components/Sidebar'
 import Sales from './pages/Sales'
 import Storage from './pages/Storage'
 import Expenses from './pages/Expenses'
+import Dashboard from './pages/Dashboard'
 import SignUp from './auth/SignUp'
 import LogIn from './auth/LogIn'
 
@@ -17,30 +17,33 @@ function App() {
 
   // Listen for authentication state changes
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      // If the user is logged in, fetch their data from Firestore
-      if (user) {
-        const docSnap = await getDoc(doc(db, "users", user.uid))
-        // If the document exists, set the user data and loggedIn state
-        if (docSnap.exists()) {
-          setUserData(docSnap.data())
+    const checkAuth = async () => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        try {
+          const user = await authAPI.me();
+          setUserData(user);
+          setLoggedIn(true);
+        } catch (error) {
+          console.error("Auth check failed:", error);
+          localStorage.removeItem('authToken');
+          setUserData(null);
+          setLoggedIn(false);
         }
-        setLoggedIn(true)
-        // If the user is not logged in, clear the user data and set loggedIn to false
       } else {
-        setUserData(null)
-        setLoggedIn(false)
+        setUserData(null);
+        setLoggedIn(false);
       }
-    })
-    return () => unsubscribe()
+    };
+    checkAuth();
   }, [])
 
   // If the user is not logged in, show the SignUp or LogIn component based on authPage state
   if (!loggedIn) {
     if (authPage === 'signup') {
-      return <SignUp setLoggedIn={setLoggedIn} setAuthPage={setAuthPage} />
+      return <SignUp setLoggedIn={setLoggedIn} setAuthPage={setAuthPage} setUserData={setUserData} />
     } else {
-      return <LogIn setLoggedIn={setLoggedIn} setAuthPage={setAuthPage} />
+      return <LogIn setLoggedIn={setLoggedIn} setAuthPage={setAuthPage} setUserData={setUserData} />
     }
   }
 
@@ -57,7 +60,8 @@ function App() {
           </div>
         }>
           {/* {Route index for default page.*/}
-          <Route index element={<Sales />} />
+          <Route index element={<Dashboard />} />
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="storage" element={<Storage />} />
           <Route path="expenses" element={<Expenses />} />
           <Route path="sales" element={<Sales />} />

@@ -1,7 +1,6 @@
 import Header from "../components/Header";
 import { useState, useEffect } from "react";
-import { auth, db } from "../firebase";
-import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, increment } from "firebase/firestore";
+import { dataAPI } from "../api";
 
 
 function Sales() {
@@ -15,65 +14,53 @@ function Sales() {
   const [totalCost, setTotalCost] = useState(0)
   const [totalProfit, setTotalProfit] = useState(0)
 
-  //getting products for current user from the firestore and listen to changes in real time
-  useEffect(() => {
-    const user = auth.currentUser
-    if (!user) return
-
-    const q = query(collection(db, "products"), where("ownerId", "==", user.uid))
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map(docSnap => ({
-        id: docSnap.id,
-        ...docSnap.data()
-      }))
-      setProducts(items)
+  const fetchProducts = async () => {
+    try {
+      const items = await dataAPI.getProducts();
+      setProducts(items || [])
       setQuantities(prev => {
         const updated = { ...prev }
-        items.forEach(p => {
+        ;(items || []).forEach(p => {
           if (!(p.id in updated)) updated[p.id] = 0
         })
         return updated
       })
-    })
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    return () => unsubscribe()
-  }, [])
-
-  //getting total revenue, cost and profit for the current day
   useEffect(() => {
-    const user = auth.currentUser
-    if (!user) return
-
-    const today = new Date().toISOString().split('T')[0]
-
-    const q = query(
-      collection(db, "sales"),
-      where("ownerId", "==", user.uid),
-      where("date", "==", today)
-    )
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      let revenue = 0, cost = 0, profit = 0
-      snapshot.docs.forEach(doc => {
-        const data = doc.data()
-        revenue += data.revenue || 0
-        cost += data.quantitySold * data.buyingPrice || 0
-        profit += data.profit || 0
-      })
-      setTotalRevenue(revenue)
-      setTotalCost(cost)
-      setTotalProfit(profit)
-    })
-
-    return () => unsubscribe()
+    fetchProducts();
   }, [])
 
-  // function to save today's sales to firestore and update product quantities
-  const saveSales = async () => {
-    const user = auth.currentUser
-    if (!user) return
+  const fetchSales = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const sales = await dataAPI.getSales();
+      
+      let revenue = 0, cost = 0, profit = 0;
+      (sales || []).forEach(sale => {
+        // Ensure we only sum today's sales
+        if (sale.date === today || new Date(sale.created_at).toISOString().split('T')[0] === today) {
+          revenue += sale.revenue || 0;
+          cost += sale.quantitySold * sale.buyingPrice || 0;
+          profit += sale.profit || 0;
+        }
+      });
+      setTotalRevenue(revenue);
+      setTotalCost(cost);
+      setTotalProfit(profit);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
+  useEffect(() => {
+    fetchSales();
+  }, [])
+
+  const saveSales = async () => {
     const soldEntries = products
       .map(p => ({ product: p, soldQuantity: quantities[p.id] || 0 }))
       .filter(entry => entry.soldQuantity > 0)
@@ -82,30 +69,33 @@ function Sales() {
       alert('من فضلك أدخل كمية مباعة لمنتج واحد على الأقل')
       return
     }
-    //promise to update stock and record sale for each sold product
-    //promise mean that we will wait for all the promises to resolve before setting saved to true
-    await Promise.all(soldEntries.map(({ product: p, soldQuantity }) => {
-      const updateStock = updateDoc(doc(db, "products", p.id), {
-        quantity: increment(-soldQuantity)
-      })
 
-      const recordSale = addDoc(collection(db, "sales"), {
-        ownerId: user.uid,
-        productId: p.id,
-        productName: p.name,
-        quantitySold: soldQuantity,
-        sellingPrice: p.sellingPrice,
-        buyingPrice: p.buyingPrice,
-        revenue: soldQuantity * p.sellingPrice,
-        profit: soldQuantity * (p.sellingPrice - p.buyingPrice),
-        date: new Date().toISOString().split('T')[0],
-        createdAt: new Date()
-      })
+    try {
+      await Promise.all(soldEntries.map(async ({ product: p, soldQuantity }) => {
+        // Update stock
+        await dataAPI.updateProduct(p.id, {
+          quantity: p.quantity - soldQuantity
+        });
 
-      return Promise.all([updateStock, recordSale])
-    }))
+        // Record sale
+        await dataAPI.addSale({
+          productId: p.id,
+          productName: p.name,
+          quantitySold: soldQuantity,
+          sellingPrice: p.sellingPrice,
+          buyingPrice: p.buyingPrice,
+          revenue: soldQuantity * p.sellingPrice,
+          profit: soldQuantity * (p.sellingPrice - p.buyingPrice),
+          date: new Date().toISOString().split('T')[0]
+        });
+      }));
 
-    setSaved(true)
+      setSaved(true);
+      fetchProducts();
+      fetchSales();
+    } catch (err) {
+      console.error("Error saving sales:", err);
+    }
   }
 
   return (

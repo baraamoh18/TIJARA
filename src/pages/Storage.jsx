@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
 import Statics from "../components/statics";
 import Header from "../components/Header";
-import { auth, db } from "../firebase";
-import {
-    collection, addDoc, updateDoc, deleteDoc,
-    doc, query, where, onSnapshot
-} from "firebase/firestore";
+import { dataAPI } from "../api";
 import { thStyles, generalStyles, inputStyle, buttonColor } from "./storageStyles.js";
 
 
@@ -20,22 +16,17 @@ function Storage() {
     const [showModal, setShowModal] = useState(false)
     const [editId, setEditId] = useState(null)
 
-    //getting products for current user from the firestore and listen to changes in real time
+    const fetchProducts = async () => {
+        try {
+            const items = await dataAPI.getProducts();
+            setProducts(items || []);
+        } catch (err) {
+            console.error("Error fetching products", err);
+        }
+    };
+
     useEffect(() => {
-        const user = auth.currentUser
-        if (!user) return
-
-        const q = query(collection(db, "products"), where("ownerId", "==", user.uid))
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const items = snapshot.docs.map(docSnap => ({
-                id: docSnap.id,
-                ...docSnap.data()
-            }))
-            setProducts(items)
-        })
-
-        return () => unsubscribe()
+        fetchProducts();
     }, [])
 
     // Function to add or update a product in Firestore
@@ -45,25 +36,25 @@ function Storage() {
             return
         }
 
-        const user = auth.currentUser
-        if (!user) return
-
         const productData = {
-            ownerId: user.uid,
             name, quantity: Number(quantity),
             buyingPrice: Number(buyingPrice),
             sellingPrice: Number(sellingPrice),
             minimumQuantity: Number(minimumQuantity),
-            productTotalPrice: Number(quantity) * Number(buyingPrice),
-            status: Number(quantity) < Number(minimumQuantity) ? 'ناقص' : 'كاف',
+            status: Number(quantity) < Number(minimumQuantity) ? 'ناقص' : 'متاح',
             unit
         }
 
-        if (editId !== null) {
-            await updateDoc(doc(db, "products", editId), productData)
-            setEditId(null)
-        } else {
-            await addDoc(collection(db, "products"), productData)
+        try {
+            if (editId !== null) {
+                await dataAPI.updateProduct(editId, productData)
+                setEditId(null)
+            } else {
+                await dataAPI.addProduct(productData)
+            }
+            await fetchProducts()
+        } catch (err) {
+            console.error("Error saving product:", err)
         }
 
         setName(''); setQuantity(''); setBuyingPrice('')
@@ -75,7 +66,12 @@ function Storage() {
     const lowProducts = products.filter(p => p.status === 'ناقص').length
 
     const deleteItem = async (id) => {
-        await deleteDoc(doc(db, "products", id))
+        try {
+            await dataAPI.deleteProduct(id)
+            await fetchProducts()
+        } catch (err) {
+            console.error("Error deleting product:", err)
+        }
     }
 
     const modifyItem = (product) => {

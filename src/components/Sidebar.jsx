@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react"
 import { MdDashboard, MdPointOfSale, MdStorage } from "react-icons/md";
 import { CiClock2 } from "react-icons/ci";
-import { auth, db } from "../firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { dataAPI } from "../api";
 import { useNavigate, useLocation  } from 'react-router-dom'
 
 function Sidebar({userData}) {
@@ -10,19 +9,16 @@ function Sidebar({userData}) {
     const navigate = useNavigate()
     const location = useLocation()
 
-    //getting products with low quantity for current user from the firestore and listen to changes in real time
     useEffect(() => {
-        const user = auth.currentUser
-        if (!user) return
-
-        const q = query(collection(db, "products"), where("ownerId", "==", user.uid))
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const items = snapshot.docs.map(docSnap => docSnap.data())
-            setLowProducts(items.filter(p => p.status === 'ناقص').length)
-        })
-
-        return () => unsubscribe()
+        const fetchLowProducts = async () => {
+            try {
+                const items = await dataAPI.getProducts();
+                setLowProducts(items.filter(p => p.status === 'ناقص').length);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        fetchLowProducts();
     }, [])
 
     const navItem = (label, path, icon, badge) => (
@@ -32,8 +28,8 @@ function Sidebar({userData}) {
             display: "flex", justifyContent: "space-between", alignItems: "center",
             backgroundColor: location.pathname === path ? "#1f2e1f" : "transparent",
             color: location.pathname === path ? "#22c97a" : "#aaa",
-            border: "none", borderRadius: "8px", padding: "10px 14px",
-            cursor: "pointer", fontFamily: "cairo, sans-serif", fontSize: "15px",
+            border: "none", borderRadius: "8px", padding: "8px 12px",
+            cursor: "pointer", fontFamily: "cairo, sans-serif", fontSize: "14px",
             width: "100%", textAlign: "right"
         }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -52,33 +48,47 @@ function Sidebar({userData}) {
 
     return (
         <div style={{
-            width: '220px', height: '100vh', background: '#161616',
-            padding: '20px', borderLeft: "1px solid #222",
-            display: "flex", flexDirection: "column", gap: "4px"
+            width: '240px', height: '100vh', background: '#121212',
+            padding: '16px', borderLeft: "1px solid #222",
+            display: "flex", flexDirection: "column", gap: "2px",
+            boxSizing: "border-box"
         }}>
             {/* Logo */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", padding: "0 4px" }}>
-                <div>
-                    <h2 style={{ color: 'white', margin: 0, fontFamily: "cairo, sans-serif", fontSize: "20px" }}>
-                        {userData?.businessName || "تجارة"}
-                    </h2>
-                    <p style={{ color: "#555", margin: 0, fontSize: "11px", fontFamily: "cairo, sans-serif" }}>
-                        {userData?.fullName || "نظام إدارة البيزنس"}
-                    </p>
-                </div>
-                <div style={{ width: "40px", height: "40px", backgroundColor: "#22c97a22", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>📦</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: "20px", padding: "0 4px" }}>
+                <h1 style={{ color: 'white', margin: 0, fontFamily: "cairo, sans-serif", fontSize: "22px", letterSpacing: "1px" }}>
+                    TIJARA
+                </h1>
             </div>
 
             {/* الرئيسية */}
-            <p style={{ color: "#444", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "8px 4px 4px", textAlign: "right" }}>الرئيسية</p>
-            {navItem("الداشبورد", "/dashboard", <MdDashboard />)}
+            <p style={{ color: "#444", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "4px 4px 2px", textAlign: "right" }}>الرئيسية</p>
+            {navItem("الرئيسية", "/dashboard", <MdDashboard />)}
 
             {/* العمليات اليومية */}
-            <p style={{ color: "#444", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "12px 4px 4px", textAlign: "right" }}>العمليات اليومية</p>
+            <p style={{ color: "#444", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "10px 4px 2px", textAlign: "right" }}>العمليات اليومية</p>
             {navItem("مبيعات اليوم", "/sales", <MdPointOfSale />)}
             {navItem("المخزن", "/storage", <MdStorage />, lowProducts)}
             {navItem("المصروفات", "/expenses", <CiClock2 />)}
+            {navItem("الديون والأجل", "/debts", <MdStorage /> /* using storage as placeholder */, 1)}
 
+            {/* التقارير */}
+            <p style={{ color: "#444", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "10px 4px 2px", textAlign: "right" }}>التقارير</p>
+            {navItem("الأرباح والخسائر", "/profits", <MdPointOfSale />)}
+            {navItem("تقرير اليوم", "/daily-report", <CiClock2 />)}
+            {navItem("الموردون", "/suppliers", <MdStorage />)}
+
+            <div style={{ flex: 1 }}></div>
+
+            {/* User Profile */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #222', paddingTop: '12px', marginTop: '12px' }}>
+                <div style={{ textAlign: 'right' }}>
+                    <div style={{ color: 'white', fontSize: '14px', fontFamily: 'cairo, sans-serif' }}>{userData?.name || "المستخدم"}</div>
+                    <div style={{ color: '#666', fontSize: '11px', fontFamily: 'cairo, sans-serif' }}>{userData?.businessName || "مدير الفني"}</div>
+                </div>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#0d2a1b', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold' }}>
+                    {userData?.name ? userData.name.substring(0, 2) : "م"}
+                </div>
+            </div>
         </div>
     )
 }

@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import { auth, googleProvider } from "../firebase"; 
-import { createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { authAPI } from "../api";
 import { CiUser, CiMail, CiLock } from "react-icons/ci";
 import "./SignUp.css"; 
 
-function LogIn({ setLoggedIn, setAuthPage }) {
+function LogIn({ setLoggedIn, setAuthPage, setUserData }) {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,9 +15,12 @@ function LogIn({ setLoggedIn, setAuthPage }) {
     setError("");
 
     try {
-
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log("تم تسجيل الدخول بنجاح:", userCredential.user);
+      const result = await authAPI.login(email, password);
+      console.log("تم تسجيل الدخول بنجاح:", result);
+      localStorage.setItem('authToken', result.authToken);
+      // Fetch user data
+      const user = await authAPI.me();
+      setUserData(user);
       setLoggedIn(true);
 
     } catch (err) {
@@ -26,18 +28,6 @@ function LogIn({ setLoggedIn, setAuthPage }) {
       setError("حدث خطأ أثناء تسجيل الدخول: " + err.message);
     }
   };
-
-   const handleGoogleSignIn = async () => {
-      setError("");
-      try {
-        const result = await signInWithPopup(auth, googleProvider);
-        console.log("تم تسجيل الدخول بجوجل:", result.user);
-        setLoggedIn(true);
-      } catch (err) {
-        console.error(err.message);
-        setError("حدث خطأ أثناء تسجيل الدخول بجوجل: " + err.message);
-      }
-    };
     
   return (
     <div className="signup-container">
@@ -79,10 +69,6 @@ function LogIn({ setLoggedIn, setAuthPage }) {
 
         <button type="submit">تسجيل الدخول</button>
       </form>
-
-      <button type="button" onClick={handleGoogleSignIn} className="google-btn">
-        تسجيل الدخول بجوجل
-      </button>
 
       {/* زرار الانتقال لصفحة الإنشاء */}
       <button onClick={() => setAuthPage('signup')} style={{ marginTop: "20px" }}>
