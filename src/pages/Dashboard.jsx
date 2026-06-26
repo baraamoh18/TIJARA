@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useContext, useMemo } from 'react';
 import './Dashboard.css';
 import { MdWarningAmber, MdShoppingCart, MdArrowBack } from 'react-icons/md';
 import { Link } from 'react-router-dom';
+import { TijaraContext } from '../context/TijaraContext';
 
 const Dashboard = () => {
   const currentDate = new Date().toLocaleDateString('ar-EG', {
@@ -11,14 +12,70 @@ const Dashboard = () => {
     day: 'numeric'
   });
 
-  const salesLog = [
-    { date: '25 أبريل', revenue: '11,500 ج', cost: '7,062 ج', profit: '4,438 ج', margin: '39%', status: 'green' },
-    { date: '24 أبريل', revenue: '9,800 ج', cost: '6,188 ج', profit: '3,612 ج', margin: '37%', status: 'green' },
-    { date: '23 أبريل', revenue: '14,200 ج', cost: '8,726 ج', profit: '5,474 ج', margin: '39%', status: 'green' },
-    { date: '22 أبريل', revenue: '7,200 ج', cost: '5,840 ج', profit: '1,460 ج', margin: '20%', status: 'yellow' },
-    { date: '21 أبريل', revenue: '13,100 ج', cost: '8,191 ج', profit: '4,909 ج', margin: '37%', status: 'green' },
-    { date: '20 أبريل', revenue: '10,400 ج', cost: '6,552 ج', profit: '3,848 ج', margin: '37%', status: 'green' },
-  ];
+  const { state } = useContext(TijaraContext);
+  const { products, sales, isLoading, error } = state;
+
+  const { todayRevenue, todayProfit, storeValue, lowStockProducts, salesLog } = useMemo(() => {
+    if (!products || !sales) return { todayRevenue: 0, todayProfit: 0, storeValue: 0, lowStockProducts: [], salesLog: [] };
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todaySales = sales.filter(s => s.date === todayStr || (s.created_at && new Date(s.created_at).toISOString().split('T')[0] === todayStr));
+    
+    const todayRevenue = todaySales.reduce((sum, s) => sum + (s.revenue || 0), 0);
+    const todayProfit = todaySales.reduce((sum, s) => sum + (s.profit || 0), 0);
+    
+    const storeValue = products.reduce((sum, p) => sum + ((p.quantity || 0) * (p.buyingPrice || 0)), 0);
+    const lowStockProducts = products.filter(p => (p.quantity || 0) < (p.minimumQuantity || 0));
+
+    const salesByDate = sales.reduce((acc, sale) => {
+      const d = sale.date || (sale.created_at ? new Date(sale.created_at).toISOString().split('T')[0] : 'Unknown');
+      if (!acc[d]) acc[d] = { revenue: 0, cost: 0, profit: 0 };
+      acc[d].revenue += (sale.revenue || 0);
+      // fallback cost calculation if not explicit
+      const cost = sale.quantitySold * sale.buyingPrice || 0;
+      acc[d].cost += cost;
+      acc[d].profit += (sale.profit || 0);
+      return acc;
+    }, {});
+
+    // Sort descending by date
+    const sortedDates = Object.keys(salesByDate).sort((a, b) => new Date(b) - new Date(a));
+    
+    const salesLog = sortedDates.map(date => {
+      const data = salesByDate[date];
+      const margin = data.revenue > 0 ? Math.round((data.profit / data.revenue) * 100) : 0;
+      
+      // format date for arabic display
+      const formattedDate = new Date(date).toLocaleDateString('ar-EG', { month: 'long', day: 'numeric' });
+      
+      return {
+        date: formattedDate,
+        revenue: `${data.revenue} ج`,
+        cost: `${data.cost} ج`,
+        profit: `${data.profit} ج`,
+        margin: `${margin}%`,
+        status: margin > 25 ? 'green' : (margin > 0 ? 'yellow' : 'red')
+      };
+    }).slice(0, 7);
+
+    return { todayRevenue, todayProfit, storeValue, lowStockProducts, salesLog };
+  }, [products, sales]);
+
+  if (isLoading) {
+    return (
+      <div className="dashboard-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <div style={{ color: '#22c97a', fontSize: '24px', fontFamily: 'cairo, sans-serif' }}>جاري التحميل...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="dashboard-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <div style={{ color: '#ef4444', fontSize: '20px', fontFamily: 'cairo, sans-serif' }}>حدث خطأ: {error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-container">
@@ -35,8 +92,8 @@ const Dashboard = () => {
             <span className="card-title">إيراد اليوم</span>
             <span className="card-title" style={{ fontSize: '10px' }}>جنيــه *</span>
           </div>
-          <h2 className="card-value">0 <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>جنيه</span></h2>
-          <p className="card-subtitle">لم تدخل مبيعات بعد</p>
+          <h2 className="card-value">{todayRevenue} <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>جنيه</span></h2>
+          <p className="card-subtitle">{todayRevenue === 0 ? 'لم تدخل مبيعات بعد' : 'مبيعات اليوم'}</p>
         </div>
 
         <div className="summary-card green-border">
@@ -44,37 +101,36 @@ const Dashboard = () => {
             <span className="card-title">ربح اليوم</span>
             <span className="card-title" style={{ fontSize: '10px' }}>جنيــه *</span>
           </div>
-          <h2 className="card-value">0 <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>جنيه</span></h2>
-          <p className="card-subtitle">--</p>
+          <h2 className="card-value">{todayProfit} <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>جنيه</span></h2>
+          <p className="card-subtitle">{todayProfit > 0 ? 'أرباح ممتازة!' : '--'}</p>
         </div>
 
         <div className="summary-card yellow-border">
           <div className="card-header">
             <span className="card-title">قيمة المخزن</span>
           </div>
-          <h2 className="card-value">12,181 <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>جنيه</span></h2>
-          <p className="card-subtitle">5 منتج في المخزن</p>
+          <h2 className="card-value">{storeValue.toLocaleString()} <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>جنيه</span></h2>
+          <p className="card-subtitle">{products.length} منتج في المخزن</p>
         </div>
 
         <div className="summary-card red-border">
           <div className="card-header">
             <span className="card-title">ديون لم تسدد</span>
           </div>
-          <h2 className="card-value red-text">- 1,900 <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>جنيه</span></h2>
+          <h2 className="card-value red-text">- 0 <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>جنيه</span></h2>
           <p className="card-subtitle" style={{ color: '#eab308', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <MdWarningAmber className="warning-icon" /> 1 دين متأخر
+             ليس لديك ديون حاليا
           </p>
         </div>
       </div>
 
       {/* Banners */}
       <div className="banners-section">
-        <div className="banner yellow">
-          <span>مخزون قليل: منتج 1 — منتج 2</span>
-        </div>
-        <div className="banner red">
-          <span>لديك 1 دين متأخر — <span className="banner-link">اضغط هنا للتفاصيل</span></span>
-        </div>
+        {lowStockProducts.length > 0 && (
+          <div className="banner yellow">
+            <span>مخزون قليل: {lowStockProducts.map(p => p.name).join(' — ')}</span>
+          </div>
+        )}
       </div>
 
       {/* Middle Section: Charts & Top Products */}
@@ -83,7 +139,7 @@ const Dashboard = () => {
           <h3 className="panel-title">أكثر المنتجات مبيعاً اليوم</h3>
           <div className="empty-state">
             <MdShoppingCart />
-            <span>لم تدخل مبيعات اليوم بعد</span>
+            <span>سيتم عرض المنتجات هنا قريبا</span>
           </div>
         </div>
 
@@ -91,7 +147,7 @@ const Dashboard = () => {
           <h3 className="panel-title">مبيعات آخر 7 أيام</h3>
           <div className="chart-container">
             <div className="chart-bars">
-              {['26', '25', '24', '23', '22', '21', '20'].map((day, index) => (
+              {['1', '2', '3', '4', '5', '6', '7'].map((day, index) => (
                 <div key={index} className="chart-bar-group">
                   <div className={`bar-line ${index === 0 ? 'empty' : ''}`}></div>
                   <span className="bar-label">{day}</span>
@@ -133,22 +189,28 @@ const Dashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {salesLog.map((row, idx) => (
-              <tr key={idx}>
-                <td>{row.date}</td>
-                <td>{row.revenue}</td>
-                <td className="value-red">{row.cost}</td>
-                <td className="value-green">{row.profit}</td>
-                <td>
-                  <span className={`margin-badge ${row.margin === '20%' ? 'yellow' : ''}`}>
-                    {row.margin}
-                  </span>
-                </td>
-                <td>
-                  <div className={`status-dot ${row.status}`}></div>
-                </td>
+            {salesLog.length === 0 ? (
+              <tr>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>لا توجد مبيعات في هذه الفترة</td>
               </tr>
-            ))}
+            ) : (
+              salesLog.map((row, idx) => (
+                <tr key={idx}>
+                  <td>{row.date}</td>
+                  <td>{row.revenue}</td>
+                  <td className="value-red">{row.cost}</td>
+                  <td className="value-green">{row.profit}</td>
+                  <td>
+                    <span className={`margin-badge ${row.margin === '20%' ? 'yellow' : ''}`}>
+                      {row.margin}
+                    </span>
+                  </td>
+                  <td>
+                    <div className={`status-dot ${row.status}`}></div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
