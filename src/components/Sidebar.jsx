@@ -15,24 +15,22 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { useNavigate, useLocation } from 'react-router-dom';
 
 
+
 function Sidebar({ userData }) {
     const [lowProducts, setLowProducts] = useState(0)
     const navigate = useNavigate()
     const location = useLocation()
 
-    //getting products with low quantity for current user from the firestore and listen to changes in real time
     useEffect(() => {
-        const user = auth.currentUser
-        if (!user) return
-
-        const q = query(collection(db, "products"), where("ownerId", "==", user.uid))
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const items = snapshot.docs.map(docSnap => docSnap.data())
-            setLowProducts(items.filter(p => p.status === 'ناقص').length)
-        })
-
-        return () => unsubscribe()
+        const fetchLowProducts = async () => {
+            try {
+                const items = await dataAPI.getProducts();
+                setLowProducts(items.filter(p => p.status === 'ناقص').length);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        fetchLowProducts();
     }, [])
 
     const navItem = (label, path, icon, badge) => (
@@ -42,8 +40,8 @@ function Sidebar({ userData }) {
             display: "flex", justifyContent: "space-between", alignItems: "center",
             backgroundColor: location.pathname === path ? "#1f2e1f" : "transparent",
             color: location.pathname === path ? "#22c97a" : "#aaa",
-            border: "none", borderRadius: "8px", padding: "10px 14px",
-            cursor: "pointer", fontFamily: "cairo, sans-serif", fontSize: "15px",
+            border: "none", borderRadius: "8px", padding: "8px 12px",
+            cursor: "pointer", fontFamily: "cairo, sans-serif", fontSize: "14px",
             width: "100%", textAlign: "right"
         }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -62,11 +60,13 @@ function Sidebar({ userData }) {
 
     return (
         <div style={{
-            width: '220px', height: '100vh', background: '#161616',
-            padding: '20px', borderLeft: "1px solid #222",
-            display: "flex", flexDirection: "column", gap: "4px"
+            width: '240px', height: '100vh', background: '#121212',
+            padding: '16px', borderLeft: "1px solid #222",
+            display: "flex", flexDirection: "column", gap: "2px",
+            boxSizing: "border-box"
         }}>
             {/* Logo */}
+
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>
                 {/* <div>
                     <h2 style={{ color: 'white', margin: 0, fontFamily: "cairo, sans-serif", fontSize: "20px" }}>
@@ -101,6 +101,7 @@ function Sidebar({ userData }) {
             {/* {navItem("الأرباح والخسائر", "/profit-loss", <MdBarChart />)}
             {navItem("تقرير اليوم", "/daily-report", <MdAssignment />)} */}
             {navItem("الموردون", "/suppliers", <MdLocalShipping />)}
+
         </div>
     )
 }

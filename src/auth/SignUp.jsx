@@ -1,11 +1,9 @@
 import React, { useState } from "react";
-import { auth, googleProvider, db } from "../firebase";
-import { createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { authAPI } from "../api";
 import { CiUser, CiMail, CiLock } from "react-icons/ci";
-import { doc, setDoc } from "firebase/firestore";
 import "./SignUp.css";
 
-function SignUp({ setLoggedIn, setAuthPage }) {
+function SignUp({ setLoggedIn, setAuthPage, setUserData }) {
 
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
@@ -19,34 +17,19 @@ function SignUp({ setLoggedIn, setAuthPage }) {
         setError("");
 
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            console.log("تم إنشاء الحساب بنجاح:", userCredential.user);
-
-            await setDoc(doc(db, "users", userCredential.user.uid), {
-                fullName: fullName,
-                businessName: businessName,
-                email: email,
-                createdAt: new Date(),
-            });
-
+            // Note: Xano's default signup endpoint usually accepts 'name', 'email', 'password'.
+            // We pass fullName as name. If businessName is needed, it might require a separate API or customizing Xano endpoint.
+            const result = await authAPI.signup(fullName, email, password);
+            console.log("تم إنشاء الحساب بنجاح:", result);
+            localStorage.setItem('authToken', result.authToken);
+            
+            const user = await authAPI.me();
+            setUserData(user);
             setLoggedIn(true);
 
         } catch (err) {
             console.error(err.message);
             setError("حدث خطأ أثناء إنشاء الحساب: " + err.message);
-        }
-    };
-
-    // Function to handle sign in with Google
-    const handleGoogleSignIn = async () => {
-        setError("");
-        try {
-            const result = await signInWithPopup(auth, googleProvider);
-            console.log("تم تسجيل الدخول بجوجل:", result.user);
-            setLoggedIn(true);
-        } catch (err) {
-            console.error(err.message);
-            setError("حدث خطأ أثناء تسجيل الدخول بجوجل: " + err.message);
         }
     };
 
@@ -120,10 +103,6 @@ function SignUp({ setLoggedIn, setAuthPage }) {
 
                 <button type="submit">إنشاء حساب</button>
             </form>
-
-            <button type="button" onClick={handleGoogleSignIn} className="google-btn">
-                تسجيل الدخول بجوجل
-            </button>
 
             {/* زرار الانتقال لصفحة اللوج إن */}
             <button onClick={() => setAuthPage('login')} style={{ marginTop: "20px" }}>

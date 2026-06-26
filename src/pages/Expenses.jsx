@@ -1,11 +1,7 @@
 import Header from "../components/Header";
 import Statics from "../components/statics";
 import { useState, useEffect } from "react";
-import { auth, db } from "../firebase";
-import {
-    collection, addDoc, updateDoc, deleteDoc,
-    doc, query, where, onSnapshot
-} from "firebase/firestore";
+import { dataAPI } from "../api";
 
 function Expenses() {
     const [expenseTitle, setExpenseTitle] = useState('')
@@ -17,86 +13,78 @@ function Expenses() {
     const [products, setProducts] = useState([])
     const [monthlyRevenue, setMonthlyRevenue] = useState(0)
 
-    //getting expenses for current user from the firestore and listen to changes in real time
+    const fetchExpenses = async () => {
+        try {
+            const items = await dataAPI.getExpenses();
+            setExpenses(items || []);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     useEffect(() => {
-        const user = auth.currentUser
-        if (!user) return
-
-        const q = query(collection(db, "expenses"), where("ownerId", "==", user.uid))
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const items = snapshot.docs.map(docSnap => ({
-                id: docSnap.id,
-                ...docSnap.data()
-            }))
-            setExpenses(items)
-        })
-
-        return () => unsubscribe()
+        fetchExpenses();
     }, [])
 
-    //getting products for current user from the firestore and listen to changes in real time
+    const fetchProductsAndSales = async () => {
+        try {
+            const [productsData, salesData] = await Promise.all([
+                dataAPI.getProducts(),
+                dataAPI.getSales()
+            ]);
+            setProducts(productsData || []);
+
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            const total = (salesData || []).reduce((sum, sale) => {
+                const saleDate = sale.date || new Date(sale.created_at).toISOString().split('T')[0];
+                if (saleDate.startsWith(currentMonth)) {
+                    return sum + (sale.revenue || 0);
+                }
+                return sum;
+            }, 0);
+            setMonthlyRevenue(total);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     useEffect(() => {
-        const user = auth.currentUser
-        if (!user) return
-
-        const q = query(collection(db, "products"), where("ownerId", "==", user.uid))
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const items = snapshot.docs.map(docSnap => docSnap.data())
-            setProducts(items)
-        })
-
-        return () => unsubscribe()
+        fetchProductsAndSales();
     }, [])
 
-    //getting total revenue for the current month
-    useEffect(() => {
-        const user = auth.currentUser
-        if (!user) return
-
-        const currentMonth = new Date().toISOString().slice(0, 7) // "2026-06"
-
-        const q = query(
-            collection(db, "sales"),
-            where("ownerId", "==", user.uid),
-            where("date", ">=", currentMonth + "-01"),
-            where("date", "<=", currentMonth + "-31")
-        )
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const total = snapshot.docs.reduce((sum, doc) => sum + doc.data().revenue, 0)
-            setMonthlyRevenue(total)
-        })
-
-        return () => unsubscribe()
-    }, [])
-
-    // function to add new expense to firestore
+    // function to add new expense to Xano
     const addExpense = async () => {
         if (!expenseTitle || !expenseAmount || !expenseType || !expenseDate) {
             alert('يرجى ملء جميع الحقول')
             return
         }
-        const user = auth.currentUser
-        if (!user) return
 
         const newExpense = {
             title: expenseTitle,
             amount: Number(expenseAmount),
             type: expenseType,
-            date: expenseDate,
-            ownerId: user.uid
+            date: expenseDate
         }
-        await addDoc(collection(db, "expenses"), newExpense)
+        
+        try {
+            await dataAPI.addExpense(newExpense);
+            fetchExpenses();
+        } catch (err) {
+            console.error("Error adding expense:", err);
+        }
 
         setExpenseTitle(''); setExpenseAmount(''); setExpenseType('')
         setExpenseDate('');
     }
 
-    // function to delete expense from firestore
+    // function to delete expense from Xano
     const deleteExpense = async (id) => {
-        await deleteDoc(doc(db, "expenses", id))
+        try {
+            await dataAPI.deleteExpense(id);
+            fetchExpenses();
+        } catch (err) {
+            console.error("Error deleting expense:", err);
+        }
     }
 
     return (<>
