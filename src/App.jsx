@@ -8,6 +8,7 @@ import Storage from './pages/Storage'
 import Expenses from './pages/Expenses'
 import SignUp from './auth/SignUp'
 import LogIn from './auth/LogIn'
+import Suppliers from './pages/Suppliers'
 
 function App() {
   const [activePage, setActivePage] = useState('Storage')
@@ -61,6 +62,7 @@ function App() {
           <Route path="storage" element={<Storage />} />
           <Route path="expenses" element={<Expenses />} />
           <Route path="sales" element={<Sales />} />
+          <Route path="suppliers" element={<Suppliers />} />
         </Route>
       </Routes>
     </BrowserRouter>

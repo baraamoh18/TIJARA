@@ -1,8 +1,9 @@
+import DateDisplay from "./Date";
 function Header({ title, buttonText, onButtonClick, extraContent }) {
     return (
         <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: "20px 28px", borderBottom: "1px solid #1a1a1a" ,flexDirection: "row-reverse"
+            padding: "20px 28px", borderBottom: "1px solid #1a1a1a", flexDirection: "row-reverse"
         }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 {buttonText && <button onClick={onButtonClick} style={{
@@ -11,6 +12,7 @@ function Header({ title, buttonText, onButtonClick, extraContent }) {
                     cursor: "pointer", fontFamily: "cairo, sans-serif", fontSize: "14px", fontWeight: "700"
                 }}>{buttonText}</button>}
                 {extraContent}
+                <DateDisplay />
             </div>
             <h2 style={{ margin: 0, fontSize: "20px", color: "white", fontFamily: "cairo, sans-serif" }}>{title}</h2>
         </div>

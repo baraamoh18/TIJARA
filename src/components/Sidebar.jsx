@@ -1,11 +1,21 @@
 import { useState, useEffect } from "react"
-import { MdDashboard, MdPointOfSale, MdStorage } from "react-icons/md";
+import {
+    MdHome,
+    MdShoppingCart,
+    MdInventory,
+    MdAccountBalanceWallet,
+    MdHandshake,
+    MdBarChart,
+    MdAssignment,
+    MdLocalShipping
+} from "react-icons/md";
 import { CiClock2 } from "react-icons/ci";
 import { auth, db } from "../firebase";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { useNavigate, useLocation  } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom';
 
-function Sidebar({userData}) {
+
+function Sidebar({ userData }) {
     const [lowProducts, setLowProducts] = useState(0)
     const navigate = useNavigate()
     const location = useLocation()
@@ -57,28 +67,40 @@ function Sidebar({userData}) {
             display: "flex", flexDirection: "column", gap: "4px"
         }}>
             {/* Logo */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", padding: "0 4px" }}>
-                <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>
+                {/* <div>
                     <h2 style={{ color: 'white', margin: 0, fontFamily: "cairo, sans-serif", fontSize: "20px" }}>
                         {userData?.businessName || "تجارة"}
                     </h2>
                     <p style={{ color: "#555", margin: 0, fontSize: "11px", fontFamily: "cairo, sans-serif" }}>
                         {userData?.fullName || "نظام إدارة البيزنس"}
                     </p>
-                </div>
-                <div style={{ width: "40px", height: "40px", backgroundColor: "#22c97a22", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>📦</div>
+                </div> */}
+               <img 
+                    src="public/Logo.png"
+                    alt="Logo" 
+                    style={{ 
+                        width: "70px", 
+                        height: "70px", 
+                        objectFit: "contain",
+                        borderRadius: "6px" 
+                    }} 
+                />
             </div>
 
-            {/* الرئيسية */}
-            <p style={{ color: "#444", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "8px 4px 4px", textAlign: "right" }}>الرئيسية</p>
-            {navItem("الداشبورد", "/dashboard", <MdDashboard />)}
+            <p style={{ color: "#444", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "12px 4px 4px", textAlign: "right" }}> الرئيسية</p>
+            {navItem("الرئيسية", "/dashboard", <MdHome />)}
 
-            {/* العمليات اليومية */}
             <p style={{ color: "#444", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "12px 4px 4px", textAlign: "right" }}>العمليات اليومية</p>
-            {navItem("مبيعات اليوم", "/sales", <MdPointOfSale />)}
-            {navItem("المخزن", "/storage", <MdStorage />, lowProducts)}
-            {navItem("المصروفات", "/expenses", <CiClock2 />)}
+            {navItem("مبيعات اليوم", "/sales", <MdShoppingCart />)}
+            {navItem("المخزن", "/storage", <MdInventory />, lowProducts)}
+            {navItem("المصروفات", "/expenses", <MdAccountBalanceWallet />)}
+            {navItem("الديون والآجل", "/debts", <MdHandshake />, 0)}
 
+            <p style={{ color: "#444", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "12px 4px 4px", textAlign: "right" }}> التقارير</p>
+            {/* {navItem("الأرباح والخسائر", "/profit-loss", <MdBarChart />)}
+            {navItem("تقرير اليوم", "/daily-report", <MdAssignment />)} */}
+            {navItem("الموردون", "/suppliers", <MdLocalShipping />)}
         </div>
     )
 }
