@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Statics from "../components/statics";
 import Header from "../components/Header";
-import { dataAPI } from "../api";
+import { useTijara } from "../context/TijaraContext";
 import { thStyles, generalStyles, inputStyle, buttonColor } from "./storageStyles.js";
 
 
 function Storage() {
-    const [products, setProducts] = useState([])
+    const { state, addProduct: contextAddProduct, updateProduct: contextUpdateProduct, deleteProduct: contextDeleteProduct } = useTijara();
+    const { products, isLoading, error } = state;
+
     const [name, setName] = useState('')
     const [quantity, setQuantity] = useState('')
     const [buyingPrice, setBuyingPrice] = useState('')
@@ -16,28 +18,16 @@ function Storage() {
     const [showModal, setShowModal] = useState(false)
     const [editId, setEditId] = useState(null)
 
-    const fetchProducts = async () => {
-        try {
-            const items = await dataAPI.getProducts();
-            setProducts(items || []);
-        } catch (err) {
-            console.error("Error fetching products", err);
-        }
-    };
-
-    useEffect(() => {
-        fetchProducts();
-    }, [])
-
-    // Function to add or update a product in Firestore
-    const addProduct = async () => {
-        if (!name || !quantity || !buyingPrice || !sellingPrice || !unit || !minimumQuantity) {
+    // Function to add or update a product via Context
+    const handleSaveProduct = async () => {
+        if (!name || quantity === '' || buyingPrice === '' || sellingPrice === '' || !unit || minimumQuantity === '') {
             alert('يرجى ملء جميع الحقول')
             return
         }
 
         const productData = {
-            name, quantity: Number(quantity),
+            name, 
+            quantity: Number(quantity),
             buyingPrice: Number(buyingPrice),
             sellingPrice: Number(sellingPrice),
             minimumQuantity: Number(minimumQuantity),
@@ -45,44 +35,50 @@ function Storage() {
             unit
         }
 
-        try {
-            if (editId !== null) {
-                await dataAPI.updateProduct(editId, productData)
-                setEditId(null)
-            } else {
-                await dataAPI.addProduct(productData)
-            }
-            await fetchProducts()
-        } catch (err) {
-            console.error("Error saving product:", err)
+        if (editId !== null) {
+            await contextUpdateProduct(editId, productData)
+            setEditId(null)
+        } else {
+            await contextAddProduct(productData)
         }
 
-        setName(''); setQuantity(''); setBuyingPrice('')
-        setSellingPrice(''); setUnit(''); setMinimumQuantity('')
-        setShowModal(false)
+        setName(''); setQuantity(''); setBuyingPrice('');
+        setSellingPrice(''); setUnit(''); setMinimumQuantity('');
+        setShowModal(false);
     }
 
-    const totalValue = products.reduce((t, p) => t + (p.quantity * p.buyingPrice), 0)
-    const lowProducts = products.filter(p => p.status === 'ناقص').length
+    const totalValue = products.reduce((t, p) => t + ((p.quantity || 0) * (p.buyingPrice || 0)), 0)
+    const lowProducts = products.filter(p => (p.quantity || 0) < (p.minimumQuantity || 0)).length
 
     const deleteItem = async (id) => {
-        try {
-            await dataAPI.deleteProduct(id)
-            await fetchProducts()
-        } catch (err) {
-            console.error("Error deleting product:", err)
-        }
+        await contextDeleteProduct(id)
     }
 
     const modifyItem = (product) => {
-        setName(product.name);
-        setQuantity(product.quantity);
-        setBuyingPrice(product.buyingPrice);
-        setSellingPrice(product.sellingPrice);
-        setUnit(product.unit);
-        setMinimumQuantity(product.minimumQuantity);
+        setName(product.name || '');
+        setQuantity(product.quantity || '');
+        setBuyingPrice(product.buyingPrice || '');
+        setSellingPrice(product.sellingPrice || '');
+        setUnit(product.unit || '');
+        setMinimumQuantity(product.minimumQuantity || '');
         setEditId(product.id)
         setShowModal(true)
+    }
+
+    if (isLoading) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100%' }}>
+                <div style={{ color: '#22c97a', fontSize: '24px', fontFamily: 'cairo, sans-serif' }}>جاري التحميل...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100%' }}>
+                <div style={{ color: '#ef4444', fontSize: '20px', fontFamily: 'cairo, sans-serif' }}>حدث خطأ: {error}</div>
+            </div>
+        );
     }
 
     return (
@@ -92,7 +88,7 @@ function Storage() {
             {/* Stats */}
             <div style={{ display: "flex", gap: "16px", justifyContent: "space-around", width: "94%", margin: "20px auto", borderRadius: "12px" }}>
                 <Statics title="إجمالي المنتجات" value={products.length} valueColor={"white"} />
-                <Statics title="إجمالي قيمة المخزن" value={totalValue + " جنيه"} valueColor={"white"} />
+                <Statics title="إجمالي قيمة المخزن" value={totalValue.toLocaleString() + " جنيه"} valueColor={"white"} />
                 <Statics title="منتجات قليلة" value={lowProducts} valueColor={lowProducts > 0 ? "#cb6262" : "gray"} />
             </div>
 
@@ -122,13 +118,13 @@ function Storage() {
                                 <td style={generalStyles}>{p.sellingPrice}ج / {p.unit}</td>
                                 <td style={generalStyles}>{p.unit}</td>
                                 <td style={generalStyles}>{p.minimumQuantity} {p.unit}</td>
-                                <td style={generalStyles}>{p.productTotalPrice}ج / {p.unit}</td>
+                                <td style={generalStyles}>{((p.quantity || 0) * (p.buyingPrice || 0)).toLocaleString()}ج</td>
                                 <td style={generalStyles}>
                                     <span style={{
-                                        backgroundColor: p.status === 'ناقص' ? '#3a1a1a' : '#0f2a1a',
-                                        color: p.status === 'ناقص' ? '#ff6b6b' : '#22c97a',
+                                        backgroundColor: (p.quantity || 0) < (p.minimumQuantity || 0) ? '#3a1a1a' : '#0f2a1a',
+                                        color: (p.quantity || 0) < (p.minimumQuantity || 0) ? '#ff6b6b' : '#22c97a',
                                         padding: "4px 12px", borderRadius: "20px", fontSize: "12px"
-                                    }}>{p.status}</span>
+                                    }}>{(p.quantity || 0) < (p.minimumQuantity || 0) ? 'ناقص' : 'متاح'}</span>
                                 </td>
                                 <td style={generalStyles}>
                                     <button style={{
@@ -195,7 +191,7 @@ function Storage() {
                             <button style={{
                                 backgroundColor: buttonColor, color: "#000", padding: "10px 24px",
                                 border: "none", borderRadius: "8px", cursor: "pointer", fontFamily: "cairo, sans-serif", fontWeight: "700"
-                            }} onClick={addProduct}>
+                            }} onClick={handleSaveProduct}>
                                 {editId !== null ? 'حفظ التعديلات' : 'إضافة المنتج'}
                             </button>
                         </div>

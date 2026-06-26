@@ -9,6 +9,9 @@ import Dashboard from './pages/Dashboard'
 import SignUp from './auth/SignUp'
 import LogIn from './auth/LogIn'
 
+import { TijaraProvider } from './context/TijaraContext'
+import { Toaster } from 'react-hot-toast'
+
 function App() {
   const [activePage, setActivePage] = useState('Storage')
   const [loggedIn, setLoggedIn] = useState(false)
@@ -48,26 +51,29 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={
-          <div style={{ display: 'flex', direction: 'rtl', width: '100%', height: '100vh', backgroundColor: "#161616" }}>
-            <Sidebar userData={userData} />
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              {/* {Outlet will render the child routes} */}
-              <Outlet />
+    <TijaraProvider>
+      <Toaster position="bottom-right" />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={
+            <div style={{ display: 'flex', direction: 'rtl', width: '100%', height: '100vh', backgroundColor: "#161616" }}>
+              <Sidebar userData={userData} />
+              <div style={{ flex: 1, overflowY: 'auto' }}>
+                {/* {Outlet will render the child routes} */}
+                <Outlet />
+              </div>
             </div>
-          </div>
-        }>
-          {/* {Route index for default page.*/}
-          <Route index element={<Dashboard />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="storage" element={<Storage />} />
-          <Route path="expenses" element={<Expenses />} />
-          <Route path="sales" element={<Sales />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+          }>
+            {/* {Route index for default page.*/}
+            <Route index element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="storage" element={<Storage />} />
+            <Route path="expenses" element={<Expenses />} />
+            <Route path="sales" element={<Sales />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </TijaraProvider>
     // <div style={{ display: 'flex', direction: 'rtl', width: '100%', height: '100vh', backgroundColor: "#161616", }}>
     //   <Sidebar activePage={activePage} setActivePage={setActivePage} userData={userData} />
 
