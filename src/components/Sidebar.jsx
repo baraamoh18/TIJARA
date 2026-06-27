@@ -29,8 +29,8 @@ function Sidebar() {
             navigate(path)
         }} style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
-            backgroundColor: location.pathname === path ? "#1f2e1f" : "transparent",
-            color: location.pathname === path ? "#22c97a" : "#aaa",
+            backgroundColor: (location.pathname === path || (path === '/dashboard' && location.pathname === '/')) ? "#1f2e1f" : "transparent",
+            color: (location.pathname === path || (path === '/dashboard' && location.pathname === '/')) ? "#22c97a" : "#aaa",
             border: "none", borderRadius: "8px", padding: "8px 12px",
             cursor: "pointer", fontFamily: "cairo, sans-serif", fontSize: "14px",
             width: "100%", textAlign: "right"

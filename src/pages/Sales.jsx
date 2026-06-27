@@ -17,12 +17,14 @@ function Sales() {
   const { todayRevenue, todayCost, todayProfit } = useMemo(() => {
     let rev = 0, cost = 0, profit = 0;
     if (!sales) return { todayRevenue: rev, todayCost: cost, todayProfit: profit };
-    
+
     const today = new Date().toISOString().split('T')[0];
     sales.forEach(sale => {
       if (sale.date === today || (sale.created_at && new Date(sale.created_at).toISOString().split('T')[0] === today)) {
         rev += sale.revenue || 0;
-        cost += (sale.quantitySold * sale.buyingPrice) || 0;
+        const qSold = sale.quantitySold || sale.quantity_sold || 0;
+        const bPrice = sale.buyingPrice || sale.buying_price || 0;
+        cost += (qSold * bPrice) || 0;
         profit += sale.profit || 0;
       }
     });
@@ -43,10 +45,15 @@ function Sales() {
       await Promise.all(soldEntries.map(async ({ product: p, soldQuantity }) => {
         const saleData = {
           productId: p.id,
+          product_id: p.id,
           productName: p.name,
+          product_name: p.name,
           quantitySold: soldQuantity,
+          quantity_sold: soldQuantity,
           sellingPrice: p.sellingPrice,
+          selling_price: p.sellingPrice,
           buyingPrice: p.buyingPrice,
+          buying_price: p.buyingPrice,
           revenue: soldQuantity * p.sellingPrice,
           profit: soldQuantity * (p.sellingPrice - p.buyingPrice),
           date: new Date().toISOString().split('T')[0]
