@@ -5,7 +5,8 @@ import {
     MdInventory,
     MdAccountBalanceWallet,
     MdHandshake,
-    MdLocalShipping
+    MdLocalShipping,
+    MdBarChart
 } from "react-icons/md";
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTijara } from '../context/TijaraContext';
@@ -89,8 +90,8 @@ function Sidebar() {
             {navItem("الديون والآجل", "/debts", <MdHandshake />, 0)}
 
             <p style={{ color: "#444", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "12px 4px 4px", textAlign: "right" }}> التقارير</p>
-            {/* {navItem("الأرباح والخسائر", "/profit-loss", <MdBarChart />)}
-            {navItem("تقرير اليوم", "/daily-report", <MdAssignment />)} */}
+            {navItem("الأرباح والخسائر", "/profit-loss", <MdBarChart />)}
+            {/* {navItem("تقرير اليوم", "/daily-report", <MdAssignment />)} */}
             {navItem("الموردون", "/suppliers", <MdLocalShipping />)}
 
         </div>
