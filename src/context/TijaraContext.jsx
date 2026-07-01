@@ -7,6 +7,7 @@ export const TijaraContext = createContext();
 // eslint-disable-next-line react-refresh/only-export-components
 export const useTijara = () => useContext(TijaraContext);
 
+
 const initialState = {
   products: [],
   sales: [],
