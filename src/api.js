@@ -20,12 +20,12 @@ async function fetchWithAuth(url, options = {}) {
   });
 
   if (!response.ok) {
-    let errorMsg = 'Network response was not ok';
+    let errorMsg;
     try {
       const errorData = await response.json();
       errorMsg = errorData.message || JSON.stringify(errorData);
-    } catch (e) {
-      errorMsg = response.statusText;
+    } catch {
+      errorMsg = response.statusText || 'Network response was not ok';
     }
     throw new Error(errorMsg);
   }
@@ -67,4 +67,10 @@ export const dataAPI = {
   getExpenses: () => fetchWithAuth(`${API_DATA}/expense`, { method: 'GET' }),
   addExpense: (expense) => fetchWithAuth(`${API_DATA}/expense`, { method: 'POST', body: JSON.stringify(expense) }),
   deleteExpense: (id) => fetchWithAuth(`${API_DATA}/expense/${id}`, { method: 'DELETE' }),
+
+  // Suppliers (Shipments)
+  getSuppliers: () => fetchWithAuth(`${API_DATA}/supplier`, { method: 'GET' }),
+  addSupplier: (supplier) => fetchWithAuth(`${API_DATA}/supplier`, { method: 'POST', body: JSON.stringify(supplier) }),
+  updateSupplier: (id, updates) => fetchWithAuth(`${API_DATA}/supplier/${id}`, { method: 'PATCH', body: JSON.stringify(updates) }),
+  deleteSupplier: (id) => fetchWithAuth(`${API_DATA}/supplier/${id}`, { method: 'DELETE' }),
 };
