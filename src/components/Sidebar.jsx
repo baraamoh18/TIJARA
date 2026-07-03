@@ -218,7 +218,8 @@ function Sidebar({ userData, onLogout }) {
                     onClose={() => setShowLogOutModal(false)}
                     onConfirm={() => {
                         setShowLogOutModal(false);
-                        onLogout(); 
+                        navigate('/');
+                        onLogout();
                     }}
                 />
             )}
