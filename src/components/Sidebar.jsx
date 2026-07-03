@@ -10,16 +10,37 @@ import {
     MdLocalShipping
 } from "react-icons/md";
 import { CiClock2 } from "react-icons/ci";
-import { auth, db } from "../firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { dataAPI } from "../api";
 import { useNavigate, useLocation } from 'react-router-dom';
 
 
 
 function Sidebar({ userData }) {
     const [lowProducts, setLowProducts] = useState(0)
+    const [overdueCount, setOverdueCount] = useState(0)
     const navigate = useNavigate()
     const location = useLocation()
+
+    const updateDebtCount = () => {
+        try {
+            const stored = localStorage.getItem("tijara_debts");
+            if (stored) {
+                const debts = JSON.parse(stored);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const overdue = debts.filter(d => {
+                    const due = new Date(d.dueDate);
+                    due.setHours(0, 0, 0, 0);
+                    return due.getTime() - today.getTime() < 0;
+                });
+                setOverdueCount(overdue.length);
+            } else {
+                setOverdueCount(0);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
     useEffect(() => {
         const fetchLowProducts = async () => {
@@ -31,6 +52,10 @@ function Sidebar({ userData }) {
             }
         };
         fetchLowProducts();
+        
+        updateDebtCount();
+        window.addEventListener("storage", updateDebtCount);
+        return () => window.removeEventListener("storage", updateDebtCount);
     }, [])
 
     const navItem = (label, path, icon, badge) => (
@@ -95,7 +120,7 @@ function Sidebar({ userData }) {
             {navItem("مبيعات اليوم", "/sales", <MdShoppingCart />)}
             {navItem("المخزن", "/storage", <MdInventory />, lowProducts)}
             {navItem("المصروفات", "/expenses", <MdAccountBalanceWallet />)}
-            {navItem("الديون والآجل", "/debts", <MdHandshake />, 0)}
+            {navItem("الديون والآجل", "/debts", <MdHandshake />, overdueCount)}
 
             <p style={{ color: "#444", fontSize: "11px", fontFamily: "cairo, sans-serif", margin: "12px 4px 4px", textAlign: "right" }}> التقارير</p>
             {/* {navItem("الأرباح والخسائر", "/profit-loss", <MdBarChart />)}
