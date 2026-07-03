@@ -1,52 +1,263 @@
-
-.signup-container {
-  min-height: 100vh;
-  background: #0f0f0f;
+.login-page {
   display: flex;
-  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  background: #050505;
+  direction: rtl;
+  font-family: "cairo", sans-serif;
+  box-sizing: border-box;
+  gap: 0;
+}
+
+.container {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
-  direction: rtl;
-  font-family: "Cairo", sans-serif; 
-}
-
-.signup-container h1 {
-  font-size: 29px;
-  font-weight: 500;
-  color: #f2f2f2;
-  margin: 0 0 28px;
-  text-align: center;
-}
-
-.signup-container > p {
-  font-size: 20px;
-  color: #585858;
-  margin: 0 0 28px;
-  text-align: center;
-}
-
-.signup-container form {
-  background: #161616;
-  border: 0.5px solid #ffffff22;
-  border-radius: var(--border-radius-lg, 16px);
-  padding: 32px;
-  width: 500px;
   box-sizing: border-box;
+}
+
+.login-preview-panel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #0e0e0e;
+  border-radius: 24px 0 0 24px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  pointer-events: none;
+}
+
+.glow-1 {
+  width: 260px;
+  height: 260px;
+  background: rgba(34, 201, 122, 0.1);
+  top: -17%;
+  left: 75%;
+}
+
+.glow-2 {
+  width: 220px;
+  height: 220px;
+  background: rgba(34, 201, 122, 0.1);
+  bottom: -10%;
+  right: 85%;
+}
+
+
+
+.container .preview-card {
+  position: relative;
+  width: 78%;
+  max-width: 420px;
+  background: #161616;
+  border: 1px solid #262626;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.114);
+  filter: blur(0.5px);
+  z-index: 1;
+}
+
+/* لازم wrap عشان preview-list (المتعشش جوه الصف ده) ينزل سطر جديد لوحده */
+.container .preview-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.container .preview-stat-box {
+  flex: 1;
+  min-width: 45%;
+  background: linear-gradient(180deg, #2a2a2a, #1c1c1c);
+  border-radius: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
 }
 
-.signup-container form > div {
-  margin-bottom: 14px;
+.container .preview-stat-label {
+  font-size: 11px;
+  color: #999;
 }
 
-.signup-container label {
-  display: block;
-  font-size: 17px;
-  color: #a0a0a0;
-  margin-bottom: 6px;
+.container .preview-stat-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: #f2f2f2;
+}
+
+.container .preview-list {
+  /* يفرض النزول لسطر كامل تحت preview-stat-box بدل ما يقف جنبهم */
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.container .preview-list-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #232323;
+}
+
+.container .preview-list-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.container .preview-list-label {
+  font-size: 13px;
+  color: #999;
+}
+
+.container .preview-list-value {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.preview-list-value.green {
+  color: #22c97a;
+}
+
+.preview-list-value.orange {
+  color: #eab308;
+}
+
+/* ============ اللوحة اليمنى: الفورم ============ */
+.login-form-panel {
+  flex: 1;
+  background: #0a0a0a;
+  border-radius: 0 24px 24px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.login-form-wrapper {
+  width: 100%;
+  max-width: 400px;
+  padding: 0 32px;
+  text-align: center;
+}
+
+.login-logo {
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #f2f2f2;
+  margin-bottom: 28px;
+}
+
+.logo-arrow {
+  color: #22c97a;
+}
+
+.login-headline {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.5;
+  color: #f2f2f2;
+  margin: 0 0 12px;
+  font-family: "cairo", sans-serif;
+  display: flex;
+  flex-wrap: nowrap;
+  flex-direction: column;
+  
+}
+
+.headline-accent {
+  color: #22c97a;
+}
+
+.login-subtext {
+  font-size: 13px;
+  color: #888;
+  line-height: 1.7;
+  margin: 0 0 28px;
+}
+
+.social-buttons-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.social-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #161616;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 12px;
+  color: #f2f2f2;
+  font-family: "cairo", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.social-button:hover {
+  background: #1e1e1e;
+  border-color: #3a3a3a;
+}
+
+.divider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: #232323;
+}
+
+.divider-label {
+  font-size: 12px;
+  color: #555;
+}
+
+.login-error {
+  color: #e05555;
+  font-size: 13px;
+  margin: 0 0 14px;
+}
+
+.field-group {
   text-align: right;
+  margin-bottom: 16px;
+}
+
+.field-group label {
+  display: block;
+  font-size: 13px;
+  color: #aaa;
+  margin-bottom: 6px;
 }
 
 .input-with-icon {
@@ -55,71 +266,99 @@
   align-items: center;
 }
 
-.input-with-icon svg {
-  position: absolute;
-  right: 7px;
-  font-size: 24px;
-  color: #585858;
-  pointer-events: none;
-}
-
 .input-with-icon input {
   width: 100%;
-  padding: 10px 36px 10px 12px;
-  border-radius: var(--border-radius-md, 10px);
-  border: 0.5px solid #ffffff22;
-  background: #1e1e1e;
+  background: #111;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 12px 40px 12px 40px;
   color: #f2f2f2;
-  font-size: 17px;
-  font-family: "Cairo", sans-serif;
+  font-family: "cairo", sans-serif;
+  font-size: 14px;
   box-sizing: border-box;
   outline: none;
-  transition: border-color 0.15s ease;
-}
-
-.input-with-icon input::placeholder {
-  color: #585858;
+  transition: border-color 0.15s;
 }
 
 .input-with-icon input:focus {
-  border-color: #22c97a;
+  border-color: #22c97a55;
 }
 
-/* زرار إنشاء الحساب */
-.signup-container form > button[type="submit"] {
-  width: 100%;
-  padding: 11px;
-  border-radius: var(--border-radius-md, 10px);
-  border: none;
-  background: #22c97a;
-  color: #000;
-  font-weight: 500;
+.input-with-icon input::placeholder {
+  color: #4a4a4a;
+}
+
+.field-icon {
+  position: absolute;
+  right: 12px;
   font-size: 17px;
-  font-family: "Cairo", sans-serif;
-  cursor: pointer;
-  margin-top: 10px;
-  transition: opacity 0.15s ease;
+  color: #555;
+  pointer-events: none;
 }
 
-.signup-container form > button[type="submit"]:hover {
-  opacity: 0.9;
-}
-
-.signup-container > p[style] {
-  text-align: center;
-}
-
-/* زرار "لديك حساب؟ تسجيل الدخول" */
-.signup-container > button {
+.eye-toggle {
+  position: absolute;
+  left: 10px;
   background: none;
   border: none;
-  color: #22c97a;
-  font-size: 17px;
-  font-family: "Cairo", sans-serif;
+  color: #666;
+  font-size: 16px;
   cursor: pointer;
-  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  padding: 4px;
 }
 
-.signup-container > button:hover {
-  text-decoration: underline;
+.eye-toggle:hover {
+  color: #999;
+}
+
+.login-submit {
+  width: 100%;
+  background: #28d085;
+  color: #06170f;
+  border: none;
+  border-radius: 10px;
+  padding: 13px;
+  font-family: "cairo", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.15s;
+}
+
+.login-submit:hover {
+  background: #22b874;
+}
+
+.login-submit:disabled {
+  background: #3a3a3a;
+  color: #888;
+  cursor: not-allowed;
+}
+
+.signup-link {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 13px;
+  margin-top: 20px;
+  cursor: pointer;
+  font-family: "cairo", sans-serif;
+}
+
+.signup-link span {
+  color: #22c97a;
+  font-weight: 700;
+}
+
+/* ============ استجابة للموبايل ============ */
+@media (max-width: 900px) {
+  .container {
+    display: none;
+  }
+  .login-form-panel {
+    border-radius: 24px;
+  }
 }

@@ -20,12 +20,12 @@ async function fetchWithAuth(url, options = {}) {
   });
 
   if (!response.ok) {
-    let errorMsg = 'Network response was not ok';
+    let errorMsg;
     try {
       const errorData = await response.json();
       errorMsg = errorData.message || JSON.stringify(errorData);
-    } catch (e) {
-      errorMsg = response.statusText;
+    } catch {
+      errorMsg = response.statusText || 'Network response was not ok';
     }
     throw new Error(errorMsg);
   }
@@ -33,6 +33,20 @@ async function fetchWithAuth(url, options = {}) {
   // Handle empty responses (like 204 No Content or empty 200 OK for DELETE)
   const text = await response.text();
   return text ? JSON.parse(text) : {};
+}
+
+// 🛡️ دالة مساعدة لضمان أن البيانات المرتجعة عبارة عن Array دائمًا ومنع الـ Crash في الكومبوننتس
+function ensureArray(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  // في Xano أحياناً البيانات بتغلف جوة object بمفتاح مثل data أو الاصلي، هنا بنفكها بأمان
+  if (data.data && Array.isArray(data.data)) return data.data;
+  if (typeof data === 'object') {
+    const values = Object.values(data);
+    const foundArray = values.find(val => Array.isArray(val));
+    if (foundArray) return foundArray;
+  }
+  return [];
 }
 
 export const authAPI = {
@@ -54,17 +68,32 @@ export const authAPI = {
 
 export const dataAPI = {
   // Products
-  getProducts: () => fetchWithAuth(`${API_DATA}/product`, { method: 'GET' }),
+  getProducts: async () => {
+    const res = await fetchWithAuth(`${API_DATA}/product`, { method: 'GET' });
+    return ensureArray(res); // ضمان رجوع Array
+  },
   addProduct: (product) => fetchWithAuth(`${API_DATA}/product`, { method: 'POST', body: JSON.stringify(product) }),
   updateProduct: (id, updates) => fetchWithAuth(`${API_DATA}/product/${id}`, { method: 'PATCH', body: JSON.stringify(updates) }),
   deleteProduct: (id) => fetchWithAuth(`${API_DATA}/product/${id}`, { method: 'DELETE' }),
 
   // Sales
-  getSales: () => fetchWithAuth(`${API_DATA}/sale`, { method: 'GET' }),
+  getSales: async () => {
+    const res = await fetchWithAuth(`${API_DATA}/sale`, { method: 'GET' });
+    return ensureArray(res); // ضمان رجوع Array
+  },
   addSale: (sale) => fetchWithAuth(`${API_DATA}/sale`, { method: 'POST', body: JSON.stringify(sale) }),
 
   // Expenses
-  getExpenses: () => fetchWithAuth(`${API_DATA}/expense`, { method: 'GET' }),
+  getExpenses: async () => {
+    const res = await fetchWithAuth(`${API_DATA}/expense`, { method: 'GET' });
+    return ensureArray(res); // ضمان رجوع Array
+  },
   addExpense: (expense) => fetchWithAuth(`${API_DATA}/expense`, { method: 'POST', body: JSON.stringify(expense) }),
   deleteExpense: (id) => fetchWithAuth(`${API_DATA}/expense/${id}`, { method: 'DELETE' }),
+
+  // Suppliers (Shipments)
+  getSuppliers: () => fetchWithAuth(`${API_DATA}/supplier`, { method: 'GET' }),
+  addSupplier: (supplier) => fetchWithAuth(`${API_DATA}/supplier`, { method: 'POST', body: JSON.stringify(supplier) }),
+  updateSupplier: (id, updates) => fetchWithAuth(`${API_DATA}/supplier/${id}`, { method: 'PATCH', body: JSON.stringify(updates) }),
+  deleteSupplier: (id) => fetchWithAuth(`${API_DATA}/supplier/${id}`, { method: 'DELETE' }),
 };

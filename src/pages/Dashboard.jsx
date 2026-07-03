@@ -1,6 +1,6 @@
-import React, { useContext, useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 import './Dashboard.css';
-import { MdWarningAmber, MdShoppingCart, MdArrowBack } from 'react-icons/md';
+import { MdShoppingCart, MdArrowBack } from 'react-icons/md';
 import { Link } from 'react-router-dom';
 import { TijaraContext } from '../context/TijaraContext';
 
@@ -16,10 +16,15 @@ const Dashboard = () => {
   const { products, sales, isLoading, error } = state;
 
   const { todayRevenue, todayProfit, storeValue, lowStockProducts, salesLog } = useMemo(() => {
-    if (!products || !sales) return { todayRevenue: 0, todayProfit: 0, storeValue: 0, lowStockProducts: [], salesLog: [] };
+    // 🛡️ التعديل هنا: حماية كاملة بالتأكد من أن البيانات موجودة وأن sales هي Array فعلاً
+    if (!products || !sales || !Array.isArray(sales)) {
+      return { todayRevenue: 0, todayProfit: 0, storeValue: 0, lowStockProducts: [], salesLog: [] };
+    }
 
     const todayStr = new Date().toISOString().split('T')[0];
-    const todaySales = sales.filter(s => s.date === todayStr || (s.created_at && new Date(s.created_at).toISOString().split('T')[0] === todayStr));
+    
+    // فلترة المبيعات اليومية بأمان
+    const todaySales = sales.filter(s => s && (s.date === todayStr || (s.created_at && new Date(s.created_at).toISOString().split('T')[0] === todayStr)));
     
     const todayRevenue = todaySales.reduce((sum, s) => sum + (s.revenue || 0), 0);
     const todayProfit = todaySales.reduce((sum, s) => sum + (s.profit || 0), 0);
@@ -28,24 +33,26 @@ const Dashboard = () => {
     const lowStockProducts = products.filter(p => (p.quantity || 0) < (p.minimumQuantity || 0));
 
     const salesByDate = sales.reduce((acc, sale) => {
+      if (!sale) return acc;
       const d = sale.date || (sale.created_at ? new Date(sale.created_at).toISOString().split('T')[0] : 'Unknown');
       if (!acc[d]) acc[d] = { revenue: 0, cost: 0, profit: 0 };
       acc[d].revenue += (sale.revenue || 0);
-      // fallback cost calculation if not explicit
-      const cost = sale.quantitySold * sale.buyingPrice || 0;
+      
+      // حساب التكلفة الافتراضية
+      const cost = (sale.quantitySold || 0) * (sale.buyingPrice || 0);
       acc[d].cost += cost;
       acc[d].profit += (sale.profit || 0);
       return acc;
     }, {});
 
-    // Sort descending by date
+    // ترتيب تنازلي حسب التاريخ
     const sortedDates = Object.keys(salesByDate).sort((a, b) => new Date(b) - new Date(a));
     
     const salesLog = sortedDates.map(date => {
       const data = salesByDate[date];
       const margin = data.revenue > 0 ? Math.round((data.profit / data.revenue) * 100) : 0;
       
-      // format date for arabic display
+      // تنسيق التاريخ للعرض باللغة العربية
       const formattedDate = new Date(date).toLocaleDateString('ar-EG', { month: 'long', day: 'numeric' });
       
       return {
@@ -109,8 +116,8 @@ const Dashboard = () => {
           <div className="card-header">
             <span className="card-title">قيمة المخزن</span>
           </div>
-          <h2 className="card-value">{storeValue.toLocaleString()} <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>جنيه</span></h2>
-          <p className="card-subtitle">{products.length} منتج في المخزن</p>
+          <h2 className="card-value">{(storeValue || 0).toLocaleString()} <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>جنيه</span></h2>
+          <p className="card-subtitle">{(products || []).length} منتج في المخزن</p>
         </div>
 
         <div className="summary-card red-border">
@@ -126,7 +133,7 @@ const Dashboard = () => {
 
       {/* Banners */}
       <div className="banners-section">
-        {lowStockProducts.length > 0 && (
+        {(lowStockProducts || []).length > 0 && (
           <div className="banner yellow">
             <span>مخزون قليل: {lowStockProducts.map(p => p.name).join(' — ')}</span>
           </div>
@@ -189,7 +196,7 @@ const Dashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {salesLog.length === 0 ? (
+            {(salesLog || []).length === 0 ? (
               <tr>
                 <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>لا توجد مبيعات في هذه الفترة</td>
               </tr>

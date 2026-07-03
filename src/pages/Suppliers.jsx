@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Header from '../components/Header';
-import Statics from '../components/statics';
-import { thStyles, generalStyles, inputStyle, buttonColor } from "./storageStyles";
+import { inputStyle, buttonColor } from "./storageStyles";
+import { useTijara } from '../context/TijaraContext';
 
 function Suppliers() {
+    const { state, addSupplier, updateSupplier, deleteSupplier } = useTijara();
+    const shipments = state.suppliers || [];
+    const { isLoading, error } = state;
+
     const [showModal, setShowModal] = useState(false);
-    const [shipments, setShipments] = useState([]);
     const [editId, setEditId] = useState(null);
     const [hoveredRowId, setHoveredRowId] = useState(null); // لتأثير الـ Hover على الصفوف
 
@@ -18,14 +21,6 @@ function Suppliers() {
     const [unitPrice, setUnitPrice] = useState(0);
     const [notes, setNotes] = useState('');
 
-    // تحميل الشحنات من localStorage عند فتح الصفحة
-    useEffect(() => {
-        const storedShipments = localStorage.getItem('shipments');
-        if (storedShipments) {
-            setShipments(JSON.parse(storedShipments));
-        }
-    }, []);
-
     const resetForm = () => {
         setSupplierName('');
         setProductName('');
@@ -37,44 +32,28 @@ function Suppliers() {
         setEditId(null);
     };
 
-    const handleSaveShipment = () => {
+    const handleSaveShipment = async () => {
         if (!supplierName || !productName || !quantity || !currentCost || !date || !unitPrice || !notes) {
             alert("من فضلك ادخل بيانات الشحنة")
             return;
         }
 
-        let updatedShipments;
+        const shipmentData = {
+            supplier: supplierName,
+            product: productName,
+            quantity: Number(quantity),
+            currentCost: Number(currentCost),
+            date: date,
+            unitPrice: Number(unitPrice),
+            notes: notes
+        };
+
         if (editId !== null) {
-            updatedShipments = shipments.map((ship) =>
-                ship.id === editId
-                    ? {
-                        ...ship,
-                        supplier: supplierName,
-                        product: productName,
-                        quantity: Number(quantity),
-                        currentCost: Number(currentCost),
-                        date: date,
-                        unitPrice: Number(unitPrice),
-                        notes: notes
-                    }
-                    : ship
-            );
+            await updateSupplier(editId, shipmentData);
         } else {
-            const newShipment = {
-                id: Date.now(),
-                supplier: supplierName,
-                product: productName,
-                quantity: Number(quantity),
-                currentCost: Number(currentCost),
-                date: date,
-                unitPrice: Number(unitPrice),
-                notes: notes
-            };
-            updatedShipments = [...shipments, newShipment];
+            await addSupplier(shipmentData);
         }
 
-        setShipments(updatedShipments);
-        localStorage.setItem('shipments', JSON.stringify(updatedShipments));
         resetForm();
         setShowModal(false);
     };
@@ -91,13 +70,27 @@ function Suppliers() {
         setShowModal(true);
     };
 
-    const handleDeleteShipment = (id) => {
+    const handleDeleteShipment = async (id) => {
         if (window.confirm("هل أنت متأكد من حذف هذه الشحنة؟")) {
-            const updatedShipments = shipments.filter(ship => ship.id !== id);
-            setShipments(updatedShipments);
-            localStorage.setItem('shipments', JSON.stringify(updatedShipments));
+            await deleteSupplier(id);
         }
     };
+
+    if (isLoading) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100%' }}>
+                <div style={{ color: '#22c97a', fontSize: '24px', fontFamily: 'cairo, sans-serif' }}>جاري التحميل...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100%' }}>
+                <div style={{ color: '#ef4444', fontSize: '20px', fontFamily: 'cairo, sans-serif' }}>حدث خطأ: {error}</div>
+            </div>
+        );
+    }
 
     // ====== كائنات الستايل الجديدة (المطابقة لملف تيجارة المرفق) ======
     const tableStyle = {
