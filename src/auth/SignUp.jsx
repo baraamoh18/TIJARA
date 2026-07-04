@@ -8,6 +8,7 @@ import "./SignUp.css";
 
 function SignUp({ setLoggedIn, setAuthPage, setUserData }) {
     const [fullName, setFullName] = useState("");
+    const [userName, setUserName] = useState("");
     const [businessName, setBusinessName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -21,7 +22,7 @@ function SignUp({ setLoggedIn, setAuthPage, setUserData }) {
         setIsLoading(true);
 
         try {
-            const result = await authAPI.signup(fullName, email, password);
+            const result = await authAPI.signup(fullName, email, password, userName);
             localStorage.setItem("authToken", result.authToken);
 
             const res = await authAPI.me();
@@ -93,6 +94,21 @@ function SignUp({ setLoggedIn, setAuthPage, setUserData }) {
                                     placeholder="اسمك الكامل"
                                     value={fullName}
                                     onChange={(e) => setFullName(e.target.value)}
+                                    required
+                                />
+                                <CiUser className="field-icon" />
+                            </div>
+                        </div>
+
+                        <div className="field-group">
+                            <label htmlFor="userName">اسم المستخدم</label>
+                            <div className="input-with-icon">
+                                <input
+                                    type="text"
+                                    id="userName"
+                                    placeholder="@username"
+                                    value={userName}
+                                    onChange={(e) => setUserName(e.target.value.toLowerCase().replace(/\s/g, ""))}
                                     required
                                 />
                                 <CiUser className="field-icon" />
