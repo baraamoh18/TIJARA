@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import Header from "../components/Header";
+import Statics from "../components/statics";
 import { useTijara } from "../context/TijaraContext";
 import { thStyles, generalStyles } from "./storageStyles.js";
 
@@ -98,32 +99,6 @@ function ProfitLoss() {
 
     const formatCurrency = (amount) => amount.toLocaleString() + " جنيه";
 
-    const StatBox = ({ title, value, marginText, isPositive }) => (
-        <div style={{
-            flex: 1,
-            backgroundColor: "#111",
-            border: `1px solid ${isPositive ? '#22c97a30' : '#e0555530'}`,
-            borderTop: `3px solid ${isPositive ? '#22c97a' : '#e05555'}`,
-            borderRadius: "12px",
-            padding: "24px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-start",
-            justifyContent: "center",
-            boxShadow: "0 4px 6px rgba(0,0,0,0.3)"
-        }}>
-            <p style={{ color: "#888", fontSize: "14px", fontFamily: "cairo, sans-serif", margin: "0 0 8px 0" }}>{title}</p>
-            <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-                <h2 style={{ color: "white", fontSize: "28px", fontFamily: "cairo, sans-serif", margin: 0, fontWeight: "700" }}>{value}</h2>
-            </div>
-            {marginText && (
-                <p style={{ color: isPositive ? "#22c97a" : "#e05555", fontSize: "12px", fontFamily: "cairo, sans-serif", margin: "8px 0 0 0" }}>
-                    {marginText}
-                </p>
-            )}
-        </div>
-    );
-
     return (
         <>
             <Header title="الأرباح والخسائر" extraContent={<span></span>} />
@@ -131,21 +106,22 @@ function ProfitLoss() {
             <div style={{ padding: "0 28px" }}>
                 {/* Stat Boxes */}
                 <div style={{ display: "flex", gap: "20px", marginTop: "24px", marginBottom: "32px", flexDirection: "row-reverse" }}>
-                    <StatBox 
-                        title="إجمالي الإيراد" 
-                        value={formatCurrency(totalRevenue)} 
-                        isPositive={true} 
+                    <Statics
+                        title="إجمالي الإيراد"
+                        value={formatCurrency(totalRevenue)}
+                        valueColor="white"
                     />
-                    <StatBox 
-                        title="التكاليف + المصروفات" 
-                        value={formatCurrency(totalCosts)} 
-                        isPositive={false} 
+                    <Statics
+                        title="التكاليف + المصروفات"
+                        value={formatCurrency(totalCosts)}
+                        valueColor="white"
                     />
-                    <StatBox 
-                        title="الربح الصافي" 
-                        value={formatCurrency(totalNetProfit)} 
-                        marginText={`هامش: ${Math.round(totalMargin)}%`}
-                        isPositive={totalNetProfit >= 0} 
+                    <Statics
+                        title="الربح الصافي"
+                        value={formatCurrency(totalNetProfit)}
+                        valueColor={totalNetProfit >= 0 ? "#22c97a" : "#e05555"}
+                        subtitle={`هامش: ${Math.round(totalMargin)}%`}
+                        subtitleColor={totalNetProfit >= 0 ? "#22c97a" : "#e05555"}
                     />
                 </div>
 

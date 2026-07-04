@@ -18,6 +18,15 @@ function Sidebar({ userData, onLogout }) {
     const [showLogOutModal, setShowLogOutModal] = useState(false);
     const [showAccSettings, setShowAccSettings] = useState(false);
 
+    // Normalise field names — Xano may return snake_case or camelCase
+    // Falls back to the email username if no name field exists yet
+    const emailUsername = userData?.email?.split('@')[0] || null;
+    const displayName     = userData?.fullName || userData?.full_name || userData?.name || emailUsername || "المستخدم";
+    const displayUserName = userData?.userName || userData?.user_name || null;
+    const displayEmail    = userData?.email || null;
+    const avatarLetter    = displayName.charAt(0).toUpperCase() || "؟";
+
+
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -110,93 +119,112 @@ function Sidebar({ userData, onLogout }) {
                 {/* Spacer لتثبيت القائمة بالأسفل */}
                 <div style={{ flex: 1 }} />
 
-                {/* Settings Panel */}
-                {showSettings && (
+                {/* Settings Panel — floating popup above the strip */}
+                <div style={{ position: "relative" }}>
+                    {showSettings && (
+                        <div style={{
+                            position: "absolute",
+                            bottom: "calc(100% + 8px)",
+                            left: 0,
+                            right: 0,
+                            background: "#141414",
+                            borderRadius: "14px",
+                            border: "1px solid #2a2a2a",
+                            boxShadow: "0 -8px 32px rgba(0,0,0,0.6)",
+                            overflow: "hidden",
+                            zIndex: 50,
+                        }}>
+                            {/* Header strip inside popup */}
+                            <div style={{
+                                padding: "14px 14px 10px",
+                                borderBottom: "1px solid #1f1f1f",
+                                display: "flex", alignItems: "center", gap: "10px"
+                            }}>
+                                <div style={{
+                                    width: "38px", height: "38px", borderRadius: "50%",
+                                    background: "linear-gradient(135deg, #22c97a22, #22c97a44)",
+                                    border: "1px solid #22c97a55",
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    fontSize: "15px", fontWeight: "800", color: "#22c97a", flexShrink: 0
+                                }}>
+                                    {avatarLetter}
+                                </div>
+                                <div style={{ textAlign: "right", overflow: "hidden" }}>
+                                    <div style={{ fontSize: "13px", fontWeight: "700", color: "#f2f2f2", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                        {displayName}
+                                    </div>
+                                    <div style={{ fontSize: "11px", color: "#555", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                        {displayUserName ? `@${displayUserName}` : (displayEmail || "صاحب البيزنس")}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Menu items */}
+                            <div style={{ padding: "6px" }}>
+                                {[
+                                    { label: "إعدادات الحساب", icon: <MdSettings />, onClick: () => navigate("/settings"), danger: false },
+                                    { label: "باقتي وفواتيري", icon: <MdCreditCard />, onClick: () => { setShowPlans(true); setShowSettings(false); }, danger: false },
+                                    { label: "تصدير البيانات",  icon: <MdDownload />,  onClick: () => { setShowExport(true); setShowSettings(false); }, danger: false },
+                                    { label: "تسجيل الخروج",   icon: <MdLogout />,    onClick: () => { setShowLogOutModal(true); setShowSettings(false); }, danger: true },
+                                ].map(({ label, icon, onClick, danger }) => (
+                                    <button
+                                        key={label}
+                                        onClick={(e) => { e.stopPropagation(); onClick(); }}
+                                        style={{
+                                            display: "flex", alignItems: "center", justifyContent: "flex-end",
+                                            gap: "8px", padding: "9px 10px", borderRadius: "8px",
+                                            width: "100%", border: "none", background: "transparent",
+                                            fontFamily: "cairo, sans-serif", fontSize: "13px",
+                                            color: danger ? "#e05555" : "#d0d0d0",
+                                            cursor: "pointer", textAlign: "right",
+                                            transition: "background 0.15s, color 0.15s"
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.background = danger ? "#2a1515" : "#1f1f1f"}
+                                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                                    >
+                                        <span>{label}</span>
+                                        <span style={{ fontSize: "16px", opacity: 0.7 }}>{icon}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Bottom user strip */}
+                    <div
+                        onClick={() => setShowSettings(prev => !prev)}
+                        style={{
+                            display: "flex", alignItems: "center", gap: "10px",
+                            padding: "10px 12px", borderRadius: "8px",
+                            borderTop: "1px solid #1f1f1f", cursor: "pointer",
+                            background: showSettings ? "#1a1a1a" : "transparent",
+                            transition: "background 0.15s"
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#1a1a1a"}
+                        onMouseLeave={e => e.currentTarget.style.background = showSettings ? "#1a1a1a" : "transparent"}
+                    >
                     <div style={{
-                        background: "#1a1a1a", borderRadius: "10px",
-                        padding: "12px", marginBottom: "8px",
-                        border: "1px solid #2a2a2a"
+                        width: "32px", height: "32px", borderRadius: "50%",
+                        background: "#22c97a22", border: "1px solid #22c97a44",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "12px", fontWeight: "800", color: "#22c97a", flexShrink: 0
                     }}>
-                        {/* Avatar + Name + Plan */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                            <div style={{ textAlign: "right" }}>
-                                <div style={{ fontSize: "15px", fontWeight: "700", color: "#f2f2f2" }}>
-                                    {userData?.fullName || "المستخدم"}
-                                </div>
-                                <div style={{ fontSize: "13px", color: "#22c97a", marginTop: "2px" }}>
-                                    ✨ باقة Premium
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Stats داخل القائمة */}
-                        <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
-                            <div style={{
-                                flex: 1, background: "#111", borderRadius: "8px",
-                                padding: "8px", textAlign: "center", border: "1px solid #222"
-                            }}>
-                                <div style={{ fontSize: "14px", fontWeight: "800", color: "#f2f2f2" }}>٠ ج</div>
-                                <div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>ربح اليوم</div>
-                            </div>
-                            <div style={{
-                                flex: 1, background: "#111", borderRadius: "8px",
-                                padding: "8px", textAlign: "center", border: "1px solid #222"
-                            }}>
-                                <div style={{ fontSize: "14px", fontWeight: "800", color: "#22c97a" }}>
-                                    {lowProducts > 0 ? lowProducts : "—"}
-                                </div>
-                                <div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>منتج ناقص</div>
-                            </div>
-                        </div>
-
-                        <div style={{ height: "1px", background: "#2a2a2a", margin: "4px 0 8px" }} />
-
-                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            {settingItem("إعدادات الحساب", <MdSettings />, () => {
-                                setShowAccSettings(true)
-                                setShowSettings(false);
-                            })}
-                            {settingItem("باقتي وفواتيري", <MdCreditCard />, () => {
-                                setShowPlans(true);
-                                setShowSettings(false);
-                            })}
-                            {settingItem("تصدير البيانات", <MdDownload />, () => {
-                                setShowExport(true);
-                                setShowSettings(false);
-                            })}
-                            {settingItem("تسجيل الخروج", <MdLogout />, () => {
-                                setShowLogOutModal(true);
-                                setShowSettings(false);
-                            }, true)}
-                        </div>
+                       {avatarLetter}
                     </div>
-                )}
-
-                {/* Bottom user strip */}
-                <div
-                    onClick={() => setShowSettings(prev => !prev)}
-                    style={{
-                        display: "flex", alignItems: "center", gap: "10px",
-                        padding: "10px 12px", borderRadius: "8px",
-                        borderTop: "1px solid #1f1f1f", cursor: "pointer",
-                        background: showSettings ? "#1a1a1a" : "transparent",
-                        transition: "background 0.15s"
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#1a1a1a"}
-                    onMouseLeave={e => e.currentTarget.style.background = showSettings ? "#1a1a1a" : "transparent"}
-                >
-
                     <div style={{ flex: 1, textAlign: "right" }}>
-                        <div style={{ fontSize: "12px", fontWeight: "700", color: "#f2f2f2" }}>
-                            {userData?.fullName || userData?.name || "المستخدم"}
+                        <div style={{ fontSize: "14px", fontWeight: "700", color: "#f2f2f2" }}>
+                            {displayName}
                         </div>
-                        <div style={{ fontSize: "10px", color: "#555" }}>صاحب البيزنس</div>
+                        <div style={{ fontSize: "12px", color: "#555" }}>
+                            {displayUserName ? `@${displayUserName}` : (displayEmail || "صاحب البيزنس")}
+                        </div>
                     </div>
                     <span style={{
                         fontSize: "10px", color: "#555",
                         transform: showSettings ? "rotate(0deg)" : "rotate(180deg)",
                         transition: "transform 0.2s", display: "inline-block"
                     }}>▲</span>
+                </div>
                 </div>
             </div>
 

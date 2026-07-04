@@ -5,6 +5,7 @@
 .debts-page {
   font-family: "Cairo", sans-serif;
   color: var(--text1, #f0f0f0);
+  padding: 0 28px;
 }
 
 /* metric cards */

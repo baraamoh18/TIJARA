@@ -10,6 +10,7 @@ import SignUp from './auth/SignUp'
 import LogIn from './auth/LogIn'
 import Suppliers from './pages/Suppliers'
 import Debts from './pages/Debts'
+import ProfitLoss from './pages/ProfitLoss'
 
 import { TijaraProvider } from './context/TijaraContext'
 import { Toaster } from 'react-hot-toast'
@@ -75,6 +76,7 @@ function App() {
             <Route path="sales" element={<Sales />} />
             <Route path="suppliers" element={<Suppliers />} />
             <Route path="debts" element={<Debts />} />
+            <Route path="profit-loss" element={<ProfitLoss />} />
           </Route>
         </Routes>
       </BrowserRouter>
