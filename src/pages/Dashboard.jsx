@@ -15,10 +15,32 @@ const Dashboard = () => {
   const { state } = useContext(TijaraContext);
   const { products, sales, isLoading, error } = state;
 
-  const { todayRevenue, todayProfit, storeValue, lowStockProducts, salesLog } = useMemo(() => {
+  const { todayRevenue, todayProfit, storeValue, lowStockProducts, salesLog, overdueDebtsCount } = useMemo(() => {
     // 🛡️ التعديل هنا: حماية كاملة بالتأكد من أن البيانات موجودة وأن sales هي Array فعلاً
     if (!products || !sales || !Array.isArray(sales)) {
-      return { todayRevenue: 0, todayProfit: 0, storeValue: 0, lowStockProducts: [], salesLog: [] };
+      return { todayRevenue: 0, todayProfit: 0, storeValue: 0, lowStockProducts: [], salesLog: [], overdueDebtsCount: 0 };
+    }
+
+    // Load debts from localStorage
+    let overdueDebtsCount = 0;
+    try {
+      const rawDebts = localStorage.getItem("tijara_debts");
+      if (rawDebts) {
+        const parsedDebts = JSON.parse(rawDebts);
+        if (Array.isArray(parsedDebts)) {
+          const now = new Date();
+          // Normalize and check for overdue
+          overdueDebtsCount = parsedDebts.filter(d => {
+            const amount = d.amount ?? 0;
+            const paid = d.paid ?? d.paidAmount ?? 0;
+            const due = d.due ?? d.dueDate ?? "";
+            if (amount <= paid || !due) return false;
+            return new Date(due) < now;
+          }).length;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to parse debts", err);
     }
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -65,7 +87,7 @@ const Dashboard = () => {
       };
     }).slice(0, 7);
 
-    return { todayRevenue, todayProfit, storeValue, lowStockProducts, salesLog };
+    return { todayRevenue, todayProfit, storeValue, lowStockProducts, salesLog, overdueDebtsCount };
   }, [products, sales]);
 
   if (isLoading) {
@@ -135,7 +157,12 @@ const Dashboard = () => {
       <div className="banners-section">
         {(lowStockProducts || []).length > 0 && (
           <div className="banner yellow">
-            <span>مخزون قليل: {lowStockProducts.map(p => p.name).join(' — ')}</span>
+            <span>⚠️ مخزون قليل: {lowStockProducts.map(p => p.name).join(' — ')}</span>
+          </div>
+        )}
+        {overdueDebtsCount > 0 && (
+          <div className="banner red">
+            <span>🔴 عندك {overdueDebtsCount} دين(ديون) متأخر — <Link to="/debts" className="banner-link" style={{ color: '#ef4444' }}>اضغط هنا للتفاصيل</Link></span>
           </div>
         )}
       </div>
