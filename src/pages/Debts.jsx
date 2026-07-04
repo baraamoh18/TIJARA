@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Header from "../components/Header";
+import Statics from "../components/statics";
 import toast from "react-hot-toast";
 import "./Debts.css";
 
@@ -212,28 +213,22 @@ export default function Debts() {
       <Header title="الديون والآجل" />
 
       {/* ── metrics ── */}
-      <div className="debts-metrics">
-        <div className="debts-metric">
-          <div className="debts-metric-accent debts-metric-accent--red" />
-          <div className="debts-metric-label">إجمالي المطلوب</div>
-          <div className="debts-metric-val debts-metric-val--red">
-            {fmt(totalRem)} <span className="debts-metric-unit">جنيه</span>
-          </div>
-        </div>
-        <div className="debts-metric">
-          <div className="debts-metric-accent debts-metric-accent--amber" />
-          <div className="debts-metric-label">عدد العملاء بالآجل</div>
-          <div className="debts-metric-val">{remaining.length}</div>
-        </div>
-        <div className="debts-metric">
-          <div className="debts-metric-accent debts-metric-accent--red" />
-          <div className="debts-metric-label">ديون متأخرة</div>
-          <div
-            className={`debts-metric-val ${overdue.length ? "debts-metric-val--red" : ""}`}
-          >
-            {overdue.length}
-          </div>
-        </div>
+      <div style={{ display: "flex", gap: "16px", margin: "20px 0" }}>
+        <Statics
+          title="إجمالي المطلوب"
+          value={fmt(totalRem) + " جنيه"}
+          valueColor="#e05555"
+        />
+        <Statics
+          title="عدد العملاء بالآجل"
+          value={remaining.length}
+          valueColor="white"
+        />
+        <Statics
+          title="ديون متأخرة"
+          value={overdue.length}
+          valueColor={overdue.length ? "#e05555" : "white"}
+        />
       </div>
 
       {/* ── top grid: form + summary ── */}
