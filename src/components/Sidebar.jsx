@@ -21,10 +21,11 @@ function Sidebar({ userData, onLogout }) {
     // Normalise field names — Xano may return snake_case or camelCase
     // Falls back to the email username if no name field exists yet
     const emailUsername = userData?.email?.split('@')[0] || null;
-    const displayName     = userData?.fullName || userData?.full_name || userData?.name || emailUsername || "المستخدم";
+    const displayName = userData?.fullName || userData?.full_name || userData?.name || emailUsername || "المستخدم";
     const displayUserName = userData?.userName || userData?.user_name || null;
-    const displayEmail    = userData?.email || null;
-    const avatarLetter    = displayName.charAt(0).toUpperCase() || "؟";
+    const displayEmail = userData?.email || null;
+    const displayBusinessName=userData?.businessName||null;
+    const avatarLetter = displayName.charAt(0).toUpperCase() || "؟";
 
 
     const navigate = useNavigate();
@@ -154,7 +155,7 @@ function Sidebar({ userData, onLogout }) {
                                         {displayName}
                                     </div>
                                     <div style={{ fontSize: "11px", color: "#555", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                        {displayUserName ? `@${displayUserName}` : (displayEmail || "صاحب البيزنس")}
+                                        {displayBusinessName?displayBusinessName:null}
                                     </div>
                                 </div>
                             </div>
@@ -162,10 +163,10 @@ function Sidebar({ userData, onLogout }) {
                             {/* Menu items */}
                             <div style={{ padding: "6px" }}>
                                 {[
-                                    { label: "إعدادات الحساب", icon: <MdSettings />, onClick: () => navigate("/settings"), danger: false },
+                                    { label: "إعدادات الحساب", icon: <MdSettings />, onClick: () => { setShowAccSettings(true); setShowSettings(false); }, danger: false },
                                     { label: "باقتي وفواتيري", icon: <MdCreditCard />, onClick: () => { setShowPlans(true); setShowSettings(false); }, danger: false },
-                                    { label: "تصدير البيانات",  icon: <MdDownload />,  onClick: () => { setShowExport(true); setShowSettings(false); }, danger: false },
-                                    { label: "تسجيل الخروج",   icon: <MdLogout />,    onClick: () => { setShowLogOutModal(true); setShowSettings(false); }, danger: true },
+                                    { label: "تصدير البيانات", icon: <MdDownload />, onClick: () => { setShowExport(true); setShowSettings(false); }, danger: false },
+                                    { label: "تسجيل الخروج", icon: <MdLogout />, onClick: () => { setShowLogOutModal(true); setShowSettings(false); }, danger: true },
                                 ].map(({ label, icon, onClick, danger }) => (
                                     <button
                                         key={label}
@@ -203,28 +204,28 @@ function Sidebar({ userData, onLogout }) {
                         onMouseEnter={e => e.currentTarget.style.background = "#1a1a1a"}
                         onMouseLeave={e => e.currentTarget.style.background = showSettings ? "#1a1a1a" : "transparent"}
                     >
-                    <div style={{
-                        width: "32px", height: "32px", borderRadius: "50%",
-                        background: "#22c97a22", border: "1px solid #22c97a44",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: "12px", fontWeight: "800", color: "#22c97a", flexShrink: 0
-                    }}>
-                       {avatarLetter}
-                    </div>
-                    <div style={{ flex: 1, textAlign: "right" }}>
-                        <div style={{ fontSize: "14px", fontWeight: "700", color: "#f2f2f2" }}>
-                            {displayName}
+                        <div style={{
+                            width: "32px", height: "32px", borderRadius: "50%",
+                            background: "#22c97a22", border: "1px solid #22c97a44",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: "12px", fontWeight: "800", color: "#22c97a", flexShrink: 0
+                        }}>
+                            {avatarLetter}
                         </div>
-                        <div style={{ fontSize: "12px", color: "#555" }}>
-                            {displayUserName ? `@${displayUserName}` : (displayEmail || "صاحب البيزنس")}
+                        <div style={{ flex: 1, textAlign: "right" }}>
+                            <div style={{ fontSize: "14px", fontWeight: "700", color: "#f2f2f2" }}>
+                                {displayName}
+                            </div>
+                            <div style={{ fontSize: "12px", color: "#555" }}>
+                               {displayBusinessName?displayBusinessName:null}
+                            </div>
                         </div>
+                        <span style={{
+                            fontSize: "10px", color: "#555",
+                            transform: showSettings ? "rotate(0deg)" : "rotate(180deg)",
+                            transition: "transform 0.2s", display: "inline-block"
+                        }}>▲</span>
                     </div>
-                    <span style={{
-                        fontSize: "10px", color: "#555",
-                        transform: showSettings ? "rotate(0deg)" : "rotate(180deg)",
-                        transition: "transform 0.2s", display: "inline-block"
-                    }}>▲</span>
-                </div>
                 </div>
             </div>
 

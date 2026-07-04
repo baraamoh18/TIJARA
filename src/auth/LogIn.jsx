@@ -47,12 +47,12 @@ function LogIn({ setLoggedIn, setAuthPage, setUserData }) {
                         <img src="/Logo.png" alt="Tijara Logo" className="login-logo-image" />
                     </div>
 
-                    <h1 className="login-headline">
+                    <h1 className="login-headline" style={{ fontFamily: "Cairo, sans-serif" }}>
                         مخزنك تحت السيطرة،<br />
-                        <span className="headline-accent">من أول دقيقة.</span>
+                        <span className="headline-accent" style={{ fontFamily: "Cairo, sans-serif" }}>من أول دقيقة.</span>
                     </h1>
 
-                    <p className="login-subtext">
+                    <p className="login-subtext" style={{ fontFamily: "Cairo, sans-serif" }}>
                         سجّل دخولك وابدأ في متابعة مبيعاتك ومخزونك ومصروفاتك في مكان واحد.
                     </p>
 

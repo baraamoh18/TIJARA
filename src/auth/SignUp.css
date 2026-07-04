@@ -18,7 +18,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 24px;
   box-sizing: border-box;
 }
 
@@ -53,28 +52,8 @@
   width: 220px;
   height: 220px;
   background: rgba(34, 201, 122, 0.12);
-  bottom: 8%;
-  right: 10%;
-}
-
-.glow-3 {
-  width: 180px;
-  height: 180px;
-  background: rgba(34, 201, 122, 0.1);
-  top: 55%;
-  left: 5%;
-}
-
-.preview-arc {
-  position: absolute;
-  bottom: -140px;
-  right: 40px;
-  width: 320px;
-  height: 320px;
-  border-radius: 50%;
-  border: 1px solid rgba(34, 201, 122, 0.15);
-  background: radial-gradient(circle at center, rgba(34, 201, 122, 0.08), transparent 70%);
-  pointer-events: none;
+  bottom: -10%;
+  right: 80%;
 }
 
 .container .preview-card {

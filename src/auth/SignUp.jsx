@@ -5,6 +5,7 @@ import { IoEyeOutline, IoEyeOffOutline } from "react-icons/io5";
 import { FaApple, FaGoogle } from "react-icons/fa";
 import toast from "react-hot-toast";
 import "./SignUp.css";
+import { BiFontFamily } from "react-icons/bi";
 
 function SignUp({ setLoggedIn, setAuthPage, setUserData }) {
     const [fullName, setFullName] = useState("");
@@ -50,12 +51,13 @@ function SignUp({ setLoggedIn, setAuthPage, setUserData }) {
                         <img src="/Logo.png" alt="Tijara Logo" className="login-logo-image" />
                     </div>
 
-                    <h1 className="login-headline">
-                        ابدأ إدارة أعمالك،<br />
-                        <span className="headline-accent">من أول دقيقة.</span>
+                    <h1 className="login-headline" style={{ fontFamily: "Cairo, sans-serif" }}>
+                        ابدأ في إدارة أعمالك،<br />
+                       
                     </h1>
 
-                    <p className="login-subtext">
+                    <p className="login-subtext" style={{ fontFamily: "Cairo, sans-serif" }}>
+
                         أنشئ حسابك وابدأ في متابعة مبيعاتك ومخزونك ومصروفاتك في مكان واحد.
                     </p>
 
