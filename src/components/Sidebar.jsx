@@ -8,6 +8,7 @@ import { useTijara } from '../context/TijaraContext';
 import Export from "../pages/export";
 import Plans from "../pages/Plans";
 import LogOutModal from "../pages/logOutpage";
+import AccSetting from "../pages/AccSetting";
 
 
 function Sidebar({ userData, onLogout }) {
@@ -15,6 +16,7 @@ function Sidebar({ userData, onLogout }) {
     const [showExport, setShowExport] = useState(false);
     const [showPlans, setShowPlans] = useState(false);
     const [showLogOutModal, setShowLogOutModal] = useState(false);
+    const [showAccSettings, setShowAccSettings] = useState(false);
 
     // Normalise field names — Xano may return snake_case or camelCase
     // Falls back to the email username if no name field exists yet
@@ -27,11 +29,10 @@ function Sidebar({ userData, onLogout }) {
 
     const navigate = useNavigate();
     const location = useLocation();
-    
+
     const { state } = useTijara();
     const { products } = state;
 
-    // حساب المنتجات الناقصة من الـ Context مباشرة بدون مبيعات وبدون تفكير في الـ useEffect
     const lowProducts = useMemo(() => {
         if (!products) return 0;
         return products.filter(p => (p.quantity || 0) < (p.minimumQuantity || 0)).length;
@@ -243,6 +244,7 @@ function Sidebar({ userData, onLogout }) {
             {/* مودالات الصفحات الأخرى */}
             {showExport && <Export onClose={() => setShowExport(false)} />}
             {showPlans && <Plans onClose={() => setShowPlans(false)} />}
+            {showAccSettings && <AccSetting onClose={() => setShowAccSettings(false)} />}
         </>
     );
 }
