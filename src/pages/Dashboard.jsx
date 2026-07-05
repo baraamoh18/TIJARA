@@ -13,12 +13,12 @@ const Dashboard = () => {
   });
 
   const { state } = useContext(TijaraContext);
-  const { products, sales, isLoading, error } = state;
+  const { products, sales, isLoading, error, debts } = state;
 
-  const { todayRevenue, todayProfit, storeValue, lowStockProducts, salesLog } = useMemo(() => {
+  const { todayRevenue, todayProfit, storeValue, lowStockProducts, salesLog, totalDebts } = useMemo(() => {
     // 🛡️ التعديل هنا: حماية كاملة بالتأكد من أن البيانات موجودة وأن sales هي Array فعلاً
     if (!products || !sales || !Array.isArray(sales)) {
-      return { todayRevenue: 0, todayProfit: 0, storeValue: 0, lowStockProducts: [], salesLog: [] };
+      return { todayRevenue: 0, todayProfit: 0, storeValue: 0, lowStockProducts: [], salesLog: [], totalDebts: 0 };
     }
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -65,8 +65,13 @@ const Dashboard = () => {
       };
     }).slice(0, 7);
 
-    return { todayRevenue, todayProfit, storeValue, lowStockProducts, salesLog };
-  }, [products, sales]);
+    const totalDebts = (debts || []).reduce(
+      (sum, d) => sum + Math.max((d.amount || 0) - (d.paid || 0), 0),
+      0,
+    );
+
+    return { todayRevenue, todayProfit, storeValue, lowStockProducts, salesLog, totalDebts };
+  }, [products, sales, debts]);
 
   if (isLoading) {
     return (
@@ -124,9 +129,13 @@ const Dashboard = () => {
           <div className="card-header">
             <span className="card-title">ديون لم تسدد</span>
           </div>
-          <h2 className="card-value red-text">- 0 <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>جنيه</span></h2>
-          <p className="card-subtitle" style={{ color: '#eab308', display: 'flex', alignItems: 'center', gap: '4px' }}>
-             ليس لديك ديون حاليا
+          <h2 className="card-value red-text">- {(totalDebts || 0).toLocaleString()} <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>جنيه</span></h2>
+          <p className="card-subtitle" style={{ color: totalDebts > 0 ? '#eab308' : '#666', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {totalDebts > 0 ? (
+              <Link to="/debts" style={{ color: 'inherit', textDecoration: 'underline' }}>عرض الديون ←</Link>
+            ) : (
+              'ليس لديك ديون حاليا'
+            )}
           </p>
         </div>
       </div>
@@ -179,7 +188,7 @@ const Dashboard = () => {
       <div className="panel">
         <div className="table-header-row">
           <h3 className="panel-title" style={{ margin: 0 }}>سجل المبيعات — آخر 7 أيام</h3>
-          <Link to="/sales" className="table-link">
+          <Link to="/report" className="table-link">
              <MdArrowBack style={{ verticalAlign: 'middle', marginLeft: '4px' }} /> تقرير اليوم 
           </Link>
         </div>

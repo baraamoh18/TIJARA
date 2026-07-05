@@ -12,6 +12,7 @@ const initialState = {
   sales: [],
   expenses: [],
   suppliers: [],
+  debts: [],
   isLoading: true,
   error: null,
 };
@@ -31,6 +32,7 @@ function reducer(state, action) {
         sales: getArray(action.payload.sales),
         expenses: getArray(action.payload.expenses),
         suppliers: getArray(action.payload.suppliers),
+        debts: getArray(action.payload.debts),
         isLoading: false,
         error: null,
       };
@@ -73,24 +75,48 @@ function reducer(state, action) {
         ...state,
         suppliers: state.suppliers.filter((s) => s.id !== action.payload),
       };
+    case "ADD_DEBT":
+      return { ...state, debts: [...state.debts, action.payload] };
+    case "UPDATE_DEBT":
+      return {
+        ...state,
+        debts: state.debts.map((d) =>
+          d.id === action.payload.id ? { ...d, ...action.payload.updates } : d,
+        ),
+      };
+    case "DELETE_DEBT":
+      return {
+        ...state,
+        debts: state.debts.filter((d) => d.id !== action.payload),
+      };
     default:
       return state;
   }
 }
 
+let isFetchingPromise = null;
+
 export const TijaraProvider = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const fetchData = async () => {
+    if (isFetchingPromise) {
+      return isFetchingPromise;
+    }
+
     dispatch({ type: "FETCH_INIT" });
+
+    isFetchingPromise = Promise.all([
+      dataAPI.getProducts(),
+      dataAPI.getSales(),
+      dataAPI.getExpenses(),
+      dataAPI.getSuppliers(),
+      dataAPI.getDebts(),
+    ]);
+
     try {
-      const [productsRes, salesRes, expensesRes, suppliersRes] =
-        await Promise.all([
-          dataAPI.getProducts(),
-          dataAPI.getSales(),
-          dataAPI.getExpenses(),
-          dataAPI.getSuppliers(),
-        ]);
+      const [productsRes, salesRes, expensesRes, suppliersRes, debtsRes] =
+        await isFetchingPromise;
 
       dispatch({
         type: "FETCH_SUCCESS",
@@ -99,6 +125,7 @@ export const TijaraProvider = ({ children }) => {
           sales: salesRes,
           expenses: expensesRes,
           suppliers: suppliersRes,
+          debts: debtsRes,
         },
       });
     } catch (err) {
@@ -107,6 +134,8 @@ export const TijaraProvider = ({ children }) => {
         payload: err.message || "Failed to fetch data",
       });
       toast.error("فشل في تحميل البيانات من الخادم");
+    } finally {
+      isFetchingPromise = null;
     }
   };
 
@@ -246,6 +275,46 @@ export const TijaraProvider = ({ children }) => {
     }
   };
 
+  const addDebt = async (debtData) => {
+    try {
+      const newDebt = await dataAPI.addDebt(debtData);
+      if (!newDebt || typeof newDebt !== "object" || !newDebt.id) {
+        throw new Error(
+          "فشل الخادم في إرجاع بيانات الدين. تأكد من إعداد Xano بشكل صحيح.",
+        );
+      }
+      dispatch({ type: "ADD_DEBT", payload: newDebt });
+      toast.success("تم تسجيل الدين بنجاح");
+      return newDebt;
+    } catch (err) {
+      console.error(err);
+      toast.error("خطأ في تسجيل الدين: " + (err.message || ""));
+      return null;
+    }
+  };
+
+  const updateDebt = async (id, updates) => {
+    try {
+      await dataAPI.updateDebt(id, updates);
+      dispatch({ type: "UPDATE_DEBT", payload: { id, updates } });
+    } catch (err) {
+      console.error(err);
+      toast.error("خطأ في تحديث الدين: " + (err.message || ""));
+      throw err;
+    }
+  };
+
+  const deleteDebt = async (id) => {
+    try {
+      await dataAPI.deleteDebt(id);
+      dispatch({ type: "DELETE_DEBT", payload: id });
+      toast.success("تم حذف الدين بنجاح");
+    } catch (err) {
+      console.error(err);
+      toast.error("خطأ في حذف الدين");
+    }
+  };
+
   return (
     <TijaraContext.Provider
       value={{
@@ -261,6 +330,9 @@ export const TijaraProvider = ({ children }) => {
         addSupplier,
         updateSupplier,
         deleteSupplier,
+        addDebt,
+        updateDebt,
+        deleteDebt,
       }}
     >
       {children}
