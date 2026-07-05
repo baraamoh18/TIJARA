@@ -66,7 +66,7 @@ const Dashboard = () => {
     }).slice(0, 7);
 
     const totalDebts = (debts || []).reduce(
-      (sum, d) => sum + Math.max((d.amount || 0) - (d.paid || 0), 0),
+      (sum, d) => (d.isPaid ? sum : sum + (d.amount || 0)),
       0,
     );
 

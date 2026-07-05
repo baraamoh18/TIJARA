@@ -5,6 +5,22 @@ import "./Report.css";
 
 const fmt = (n) => Math.round(n || 0).toLocaleString("ar-EG");
 
+// Debt collections are tracked locally by Debts.jsx (Xano's `sale` table
+// requires a real product_id that a collection doesn't have), so we read
+// them here and fold them into today's revenue/profit.
+const COLLECTIONS_KEY = "tijara_debt_collections";
+
+const getTodaysCollections = () => {
+  let all = [];
+  try {
+    all = JSON.parse(localStorage.getItem(COLLECTIONS_KEY) || "[]");
+  } catch {
+    all = [];
+  }
+  const todayStr = new Date().toISOString().split("T")[0];
+  return all.filter((c) => c.date === todayStr);
+};
+
 function Report() {
   const { state } = useTijara();
   const { products, sales, expenses, isLoading, error } = state;
@@ -25,6 +41,7 @@ function Report() {
     netAfterExpenses,
     soldProducts,
     lowStockProducts,
+    debtCollectionsTotal,
   } = useMemo(() => {
     const todayStr = new Date().toISOString().split("T")[0];
 
@@ -64,11 +81,38 @@ function Report() {
     });
 
     const prft = rev - cst;
-    const mrg = rev > 0 ? Math.round((prft / rev) * 100) : 0;
+
+    // تحصيلات الديون اليوم (مسجلة محليًا من صفحة الديون) — الربح الحقيقي هو
+    // المبلغ ناقص تكلفة المنتج الفعلية (المحفوظة وقت تسجيل الدين)، مش المبلغ
+    // كامل كإيراد بهامش 100%
+    const todaysCollections = getTodaysCollections();
+    const debtCollectionsTotal = todaysCollections.reduce(
+      (s, c) => s + (c.amount || 0),
+      0,
+    );
+    const debtCollectionsCost = todaysCollections.reduce(
+      (s, c) => s + (c.cost || 0),
+      0,
+    );
+
+    todaysCollections.forEach((col, idx) => {
+      const key = `debt-collection-${idx}`;
+      byProduct[key] = {
+        name: col.productName || `تحصيل دين: ${col.debtorName}`,
+        qty: 1,
+        revenue: col.amount || 0,
+        profit: (col.amount || 0) - (col.cost || 0),
+      };
+    });
+
+    const finalRevenue = rev + debtCollectionsTotal;
+    const finalCost = cst + debtCollectionsCost;
+    const finalProfit = prft + (debtCollectionsTotal - debtCollectionsCost);
+    const mrg = finalRevenue > 0 ? Math.round((finalProfit / finalRevenue) * 100) : 0;
 
     // المصروفات (كل المصروفات المسجلة، زي الأصل بالظبط)
     const totalExp = (expenses || []).reduce((s, e) => s + (e.amount || 0), 0);
-    const netFinal = prft - totalExp;
+    const netFinal = finalProfit - totalExp;
 
     const soldProductsArr = Object.values(byProduct).sort(
       (a, b) => b.revenue - a.revenue,
@@ -80,14 +124,15 @@ function Report() {
     );
 
     return {
-      revenue: rev,
-      cost: cst,
-      profit: prft,
+      revenue: finalRevenue,
+      cost: finalCost,
+      profit: finalProfit,
       margin: mrg,
       totalExpenses: totalExp,
       netAfterExpenses: netFinal,
       soldProducts: soldProductsArr,
       lowStockProducts: lowProds,
+      debtCollectionsTotal,
     };
   }, [sales, expenses, products]);
 
@@ -151,6 +196,7 @@ function Report() {
             <div className="report-card-hd">
               <div className="report-card-title">📦 المنتجات المباعة</div>
             </div>
+            <div style={{ maxHeight: "360px", overflowY: "auto" }}>
             {soldProducts.length === 0 ? (
               <div className="report-empty">
                 <div className="report-empty-icon">📦</div>
@@ -172,6 +218,7 @@ function Report() {
                 );
               })
             )}
+            </div>
           </div>
 
           <div className="report-card">
@@ -186,6 +233,14 @@ function Report() {
               <span className="report-stat-label">تكلفة البضاعة</span>
               <span className="report-stat-val report-stat-val--red">{fmt(cost)} ج</span>
             </div>
+            {debtCollectionsTotal > 0 && (
+              <div className="report-stat-row">
+                <span className="report-stat-label">تحصيل ديون اليوم</span>
+                <span className="report-stat-val report-stat-val--green">
+                  {fmt(debtCollectionsTotal)} ج
+                </span>
+              </div>
+            )}
             <div className="report-stat-row">
               <span className="report-stat-label">الربح التجاري</span>
               <span className="report-stat-val report-stat-val--green">{fmt(profit)} ج</span>

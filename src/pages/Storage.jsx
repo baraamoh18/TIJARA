@@ -94,13 +94,14 @@ function Storage() {
 
             {/* Table */}
             <div style={{ padding: "0 28px" }}>
-                <table style={{ width: "97%", borderCollapse: "collapse", backgroundColor: "#0f0f0f", borderRadius: "12px", overflow: "hidden", margin: "0 auto" }}>
+                <div style={{ maxHeight: "560px", overflowY: "auto", borderRadius: "12px", margin: "0 auto", width: "97%" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", backgroundColor: "#0f0f0f", borderRadius: "12px", overflow: "hidden" }}>
                     <thead>
                         <tr>
                             {["اسم المنتج", "الكمية", "سعر الشراء", "سعر البيع", "الوحدة", "الحد الأدنى", "الإجمالي", "الحالة"].map(h => (
-                                <th key={h} style={thStyles}>{h}</th>
+                                <th key={h} style={{ ...thStyles, position: "sticky", top: 0, zIndex: 1 }}>{h}</th>
                             ))}
-                            <th style={thStyles}></th>
+                            <th style={{ ...thStyles, position: "sticky", top: 0, zIndex: 1 }}></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -152,6 +153,7 @@ function Storage() {
                         ))}
                     </tbody>
                 </table>
+                </div>
             </div>
 
             {/* Modal */}

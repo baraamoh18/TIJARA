@@ -187,13 +187,14 @@ export const TijaraProvider = ({ children }) => {
     }
   };
 
-  const addSale = async (saleData, productId, updatedQuantity) => {
+  const addSale = async (saleData, productId, productUpdates) => {
     try {
-      // First update the product quantity
-      await dataAPI.updateProduct(productId, { quantity: updatedQuantity });
+      // Send the FULL product record on update — Xano's PATCH endpoint needs
+      // every field, not just the one changing (same issue we hit with debts).
+      await dataAPI.updateProduct(productId, productUpdates);
       dispatch({
         type: "UPDATE_PRODUCT",
-        payload: { id: productId, updates: { quantity: updatedQuantity } },
+        payload: { id: productId, updates: productUpdates },
       });
 
       // Then record the sale

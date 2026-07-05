@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Header from "../components/Header";
 import toast from "react-hot-toast";
 import { useTijara } from "../context/TijaraContext";
@@ -36,36 +36,62 @@ const defaultDueDate = () => {
 };
 
 /* ─────────────────────────────────────────────
-   NOTES (local-only, NOT synced with Xano)
-   Xano's `debt` table has no column for notes, so we
-   keep them client-side, keyed by debt id.
+   EXTRA DEBT DATA (local-only, NOT synced with Xano)
+   Xano's `debt` table only has debtorName/amount/isPaid/dueDate —
+   no product/quantity/cost columns. We keep the real product link,
+   quantity, and true cost here so profit is calculated correctly
+   when the debt is collected, instead of treating 100% of the
+   amount as profit.
  ───────────────────────────────────────────── */
-const NOTES_KEY = "tijara_debt_notes";
+const EXTRA_KEY = "tijara_debt_extra";
 
-const getAllNotes = () => {
+const getAllExtra = () => {
   try {
-    return JSON.parse(localStorage.getItem(NOTES_KEY) || "{}");
+    return JSON.parse(localStorage.getItem(EXTRA_KEY) || "{}");
   } catch {
     return {};
   }
 };
 
-const getNote = (id) => getAllNotes()[id] || "";
+const getExtra = (id) => getAllExtra()[id] || null;
 
-const saveNote = (id, note) => {
-  const all = getAllNotes();
-  if (note && note.trim()) {
-    all[id] = note.trim();
-  } else {
-    delete all[id];
-  }
-  localStorage.setItem(NOTES_KEY, JSON.stringify(all));
+const saveExtra = (id, data) => {
+  const all = getAllExtra();
+  all[id] = data;
+  localStorage.setItem(EXTRA_KEY, JSON.stringify(all));
 };
 
-const removeNote = (id) => {
-  const all = getAllNotes();
+const removeExtra = (id) => {
+  const all = getAllExtra();
   delete all[id];
-  localStorage.setItem(NOTES_KEY, JSON.stringify(all));
+  localStorage.setItem(EXTRA_KEY, JSON.stringify(all));
+};
+
+/* ─────────────────────────────────────────────
+   DEBT COLLECTIONS (local-only, read by Report.jsx)
+   Xano's `sale` table requires a real product_id, which a
+   debt collection doesn't have — so we track collected amounts
+   here instead, and Report.jsx adds them to today's revenue,
+   using the REAL cost saved in EXTRA_KEY for an accurate profit.
+ ───────────────────────────────────────────── */
+const COLLECTIONS_KEY = "tijara_debt_collections";
+
+const addCollectionRecord = (debtorName, amount, productName, cost) => {
+  let all = [];
+  try {
+    all = JSON.parse(localStorage.getItem(COLLECTIONS_KEY) || "[]");
+  } catch {
+    all = [];
+  }
+  all.push({
+    debtorName,
+    amount,
+    productName: productName || `تحصيل دين: ${debtorName}`,
+    cost: cost || 0,
+    date: new Date().toISOString().split("T")[0],
+    ts: Date.now(),
+  });
+  localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(all));
 };
 
 /* ─────────────────────────────────────────────
@@ -76,15 +102,16 @@ export default function Debts() {
     state,
     addDebt: contextAddDebt,
     updateDebt: contextUpdateDebt,
+    updateProduct: contextUpdateProduct,
     deleteDebt: contextDeleteDebt,
   } = useTijara();
-  const { debts, isLoading, error } = state;
+  const { debts, products, isLoading, error } = state;
 
   // Form States
   const [debtorName, setDebtorName] = useState("");
-  const [amount, setAmount] = useState("");
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [quantity, setQuantity] = useState("");
   const [dueDate, setDueDate] = useState(defaultDueDate());
-  const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // Collect Modal States
@@ -93,14 +120,41 @@ export default function Debts() {
   const [collectMethod, setCollectMethod] = useState("كاش");
   const [collectingId, setCollectingId] = useState(null);
 
-  /* ── add debt ── */
+  const safeProducts = products || [];
+  const selectedProduct = safeProducts.find(
+    (p) => String(p.id) === String(selectedProductId),
+  );
+
+  const computedAmount = useMemo(() => {
+    const qty = parseFloat(quantity) || 0;
+    if (!selectedProduct || !qty) return 0;
+    return qty * (selectedProduct.sellingPrice || 0);
+  }, [selectedProduct, quantity]);
+
+  /* ── add debt (tied to a real product, deducts stock now) ── */
   const handleAdd = async (e) => {
     e.preventDefault();
-    const amt = parseFloat(amount) || 0;
-    if (!debtorName.trim() || !amt) {
-      toast.error("اكتب اسم العميل والمبلغ");
+    const qty = parseFloat(quantity) || 0;
+
+    if (!debtorName.trim()) {
+      toast.error("اكتب اسم العميل");
       return;
     }
+    if (!selectedProduct) {
+      toast.error("اختار المنتج اللي بيعته بالآجل");
+      return;
+    }
+    if (!qty || qty <= 0) {
+      toast.error("اكتب كمية صحيحة");
+      return;
+    }
+    if (qty > (selectedProduct.quantity || 0)) {
+      toast.error("الكمية أكبر من المتاح في المخزن");
+      return;
+    }
+
+    const amt = qty * (selectedProduct.sellingPrice || 0);
+    const cost = qty * (selectedProduct.buyingPrice || 0);
 
     // Matches Xano's `debt` table columns exactly: debtorName, amount, isPaid, dueDate
     const debtData = {
@@ -112,17 +166,39 @@ export default function Debts() {
 
     setSubmitting(true);
     const newDebt = await contextAddDebt(debtData);
-    setSubmitting(false);
 
-    // Save the note locally (Xano has no column for it) once we have the new id
-    if (newDebt && newDebt.id && note.trim()) {
-      saveNote(newDebt.id, note.trim());
+    if (newDebt && newDebt.id) {
+      // Save the real product link/qty/cost locally (Xano has no columns for it)
+      saveExtra(newDebt.id, {
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        qty,
+        cost,
+      });
+
+      // Deduct stock now — the goods already left the store on credit,
+      // exactly like a cash sale would. Send the FULL product record on
+      // update (Xano's PATCH needs every column, not just quantity).
+      const newQuantity = (selectedProduct.quantity || 0) - qty;
+      await contextUpdateProduct(selectedProduct.id, {
+        name: selectedProduct.name,
+        quantity: newQuantity,
+        buyingPrice: selectedProduct.buyingPrice,
+        sellingPrice: selectedProduct.sellingPrice,
+        unit: selectedProduct.unit,
+        minimumQuantity: selectedProduct.minimumQuantity,
+        status:
+          newQuantity < (selectedProduct.minimumQuantity || 0)
+            ? "ناقص"
+            : "متاح",
+      });
     }
 
+    setSubmitting(false);
     setDebtorName("");
-    setAmount("");
+    setSelectedProductId("");
+    setQuantity("");
     setDueDate(defaultDueDate());
-    setNote("");
   };
 
   /* ── open collect modal ── */
@@ -145,6 +221,18 @@ export default function Debts() {
         dueDate: collectingDebt.dueDate,
         isPaid: true,
       });
+
+      // Log the collected amount locally so Report.jsx can add it to
+      // today's revenue/profit using the REAL cost of the product that
+      // was sold on credit — not treating the whole amount as profit.
+      const extra = getExtra(collectingDebt.id);
+      addCollectionRecord(
+        collectingDebt.debtorName,
+        collectingDebt.amount,
+        extra?.productName,
+        extra?.cost,
+      );
+
       setCollectOpen(false);
       toast.success(
         `✅ تم تحصيل دين ${collectingDebt.debtorName} بالكامل (${collectMethod})`,
@@ -156,11 +244,36 @@ export default function Debts() {
     }
   };
 
-  /* ── delete ── */
+  /* ── delete (restores stock if the debt was never collected) ── */
   const handleDelete = async (id) => {
     if (!window.confirm("هتمسح الدين ده؟")) return;
+
+    const debt = (debts || []).find((d) => d.id === id);
+    const extra = getExtra(id);
+
+    // If it was never paid, the goods are effectively "returned" — put the
+    // quantity back in stock.
+    if (debt && !debt.isPaid && extra) {
+      const product = safeProducts.find((p) => p.id === extra.productId);
+      if (product) {
+        const restoredQuantity = (product.quantity || 0) + (extra.qty || 0);
+        await contextUpdateProduct(product.id, {
+          name: product.name,
+          quantity: restoredQuantity,
+          buyingPrice: product.buyingPrice,
+          sellingPrice: product.sellingPrice,
+          unit: product.unit,
+          minimumQuantity: product.minimumQuantity,
+          status:
+            restoredQuantity < (product.minimumQuantity || 0)
+              ? "ناقص"
+              : "متاح",
+        });
+      }
+    }
+
     await contextDeleteDebt(id);
-    removeNote(id);
+    removeExtra(id);
   };
 
   if (isLoading) {
@@ -219,61 +332,86 @@ export default function Debts() {
         {/* form card */}
         <div className="debts-card">
           <div className="debts-card-hd">
-            <div className="debts-card-title">📝 تسجيل دين جديد</div>
+            <div className="debts-card-title">📝 تسجيل دين جديد (بيع بالآجل)</div>
           </div>
-          <form onSubmit={handleAdd}>
-            <div className="debts-form-group">
-              <div className="debts-form-label">اسم العميل</div>
-              <input
-                className="debts-input"
-                placeholder="اسم العميل"
-                value={debtorName}
-                onChange={(e) => setDebtorName(e.target.value)}
-              />
+          {safeProducts.length === 0 ? (
+            <div className="debts-empty">
+              <div className="debts-empty-icon">📦</div>
+              <div className="debts-empty-text">
+                أضف منتجات في صفحة المخزن الأول عشان تقدر تسجّل بيع بالآجل
+              </div>
             </div>
-            <div className="debts-form-row">
+          ) : (
+            <form onSubmit={handleAdd}>
               <div className="debts-form-group">
-                <div className="debts-form-label">المبلغ (جنيه)</div>
+                <div className="debts-form-label">اسم العميل</div>
                 <input
                   className="debts-input"
-                  type="number"
-                  placeholder="0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="اسم العميل"
+                  value={debtorName}
+                  onChange={(e) => setDebtorName(e.target.value)}
                 />
               </div>
               <div className="debts-form-group">
-                <div className="debts-form-label">تاريخ الاستحقاق</div>
-                <input
+                <div className="debts-form-label">المنتج</div>
+                <select
                   className="debts-input"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
+                  value={selectedProductId}
+                  onChange={(e) => setSelectedProductId(e.target.value)}
+                >
+                  <option value="">اختر المنتج</option>
+                  {safeProducts.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} (متاح: {p.quantity || 0} {p.unit})
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
-            <div className="debts-form-group">
-              <div className="debts-form-label">
-                البضاعة / الملاحظة{" "}
-                <span style={{ opacity: 0.6, fontSize: 12 }}>
-                  (محفوظة على هذا المتصفح فقط)
-                </span>
+              <div className="debts-form-row">
+                <div className="debts-form-group">
+                  <div className="debts-form-label">
+                    الكمية {selectedProduct ? `(${selectedProduct.unit})` : ""}
+                  </div>
+                  <input
+                    className="debts-input"
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                  />
+                </div>
+                <div className="debts-form-group">
+                  <div className="debts-form-label">تاريخ الاستحقاق</div>
+                  <input
+                    className="debts-input"
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                  />
+                </div>
               </div>
-              <input
-                className="debts-input"
-                placeholder="مثال: 5 كيلو أرز + كيلو سكر"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="debts-btn-green debts-btn-green--full"
-            >
-              {submitting ? "جاري الحفظ..." : "+ تسجيل الدين"}
-            </button>
-          </form>
+              {selectedProduct && (
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "var(--text2, #909090)",
+                    marginBottom: 12,
+                  }}
+                >
+                  المبلغ المستحق: <strong>{fmt(computedAmount)} ج</strong> (
+                  {quantity || 0} × {fmt(selectedProduct.sellingPrice)} ج)
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="debts-btn-green debts-btn-green--full"
+              >
+                {submitting ? "جاري الحفظ..." : "+ تسجيل الدين"}
+              </button>
+            </form>
+          )}
         </div>
 
         {/* summary card */}
@@ -333,7 +471,7 @@ export default function Debts() {
             const rem = d.amount || 0;
             const od = isOverdue(d);
             const daysLeft = getDaysLeft(d.dueDate);
-            const noteText = getNote(d.id);
+            const extra = getExtra(d.id);
             let statusTxt, statusType;
             if (od) {
               statusTxt = "متأخر";
@@ -365,7 +503,9 @@ export default function Debts() {
                 <div className="debts-debt-info">
                   <div className="debts-debt-name">{d.debtorName}</div>
                   <div className="debts-debt-meta">
-                    {noteText || "بدون ملاحظة"}
+                    {extra
+                      ? `${extra.productName} × ${extra.qty}`
+                      : "بدون منتج مرتبط"}
                     {d.created_at
                       ? ` · ${new Date(d.created_at).toLocaleDateString("ar-EG")}`
                       : ""}
@@ -419,7 +559,10 @@ export default function Debts() {
               المطلوب: {fmt(collectingDebt.amount || 0)} جنيه
               <br />
               <span className="debts-modal-summary-note">
-                {getNote(collectingDebt.id) || ""}
+                {(() => {
+                  const extra = getExtra(collectingDebt.id);
+                  return extra ? `${extra.productName} × ${extra.qty}` : "";
+                })()}
               </span>
             </div>
           )}
