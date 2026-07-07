@@ -58,7 +58,7 @@ function AccSetting({ onClose }) {
                 setUser(userData);
 
                 // 🖊️ تعبئة الحقول من البيانات الراجعة (لو مش موجودة بتفضل فاضية للمستخدم يملاها)
-                setOwnerName(userData?.name || userData?.fullName || userData?.email || "");
+                setOwnerName(userData?.fullName || userData?.name || userData?.email || "");
                 setBusinessName(userData?.businessName || "");
                 setPhone(userData?.phone || "");
                 setCity(userData?.city || "");
@@ -82,11 +82,33 @@ function AccSetting({ onClose }) {
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            console.log("سيتم حفظ:", { ownerName, businessName, phone, city, businessType });
-            toast("محتاجين نضيف endpoint للحفظ في Xano أولاً");
+            // 1. Save profile fields
+            await authAPI.updateMe({
+                fullName: ownerName,
+                businessName,
+                phone,
+                city,
+                businessType,
+            });
+
+            // 2. Change password only if user filled in both fields
+            if (currentPassword && newPassword) {
+                await authAPI.changePassword(currentPassword, newPassword);
+                setCurrentPassword("");
+                setNewPassword("");
+            }
+
+            toast.success("✅ تم حفظ التغييرات بنجاح");
         } catch (error) {
             console.error(error);
-            toast.error("حصل خطأ أثناء الحفظ");
+            const isNotFound = error.message?.toLowerCase().includes("locate") ||
+                               error.message?.includes("404") ||
+                               error.message?.toLowerCase().includes("not found");
+            if (isNotFound) {
+                toast.error("⚙️ يجب إنشاء endpoint مخصص في Xano أولاً — راجع التعليمات");
+            } else {
+                toast.error("❌ حصل خطأ أثناء الحفظ: " + error.message);
+            }
         } finally {
             setIsSaving(false);
         }

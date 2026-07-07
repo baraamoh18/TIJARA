@@ -71,10 +71,25 @@ export const authAPI = {
       body: JSON.stringify({ email, password }),
     }),
 
-  signup: (name, email, password, userName) =>
+  signup: (fullName, email, password, userName, businessName) =>
     fetchWithAuth(`${API_AUTH}/auth/signup`, {
       method: 'POST',
-      body: JSON.stringify({ name, email, password, userName }),
+      body: JSON.stringify({ fullName, email, password, userName, businessName }),
+    }),
+
+  // POST /user/update — custom Xano endpoint to update profile fields
+  // (Xano's built-in /auth/me is GET-only; this must be a custom endpoint you create)
+  updateMe: (fields) =>
+    fetchWithAuth(`${API_AUTH}/user/update`, {
+      method: 'POST',
+      body: JSON.stringify(fields),
+    }),
+
+  // POST /auth/password — change password (currentPassword + newPassword)
+  changePassword: (currentPassword, newPassword) =>
+    fetchWithAuth(`${API_AUTH}/auth/password`, {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
     }),
 
   me: () => fetchWithAuth(`${API_AUTH}/auth/me`, { method: "GET" }),

@@ -21,29 +21,53 @@ function App() {
   const [authPage, setAuthPage] = useState('signup')
   const [userData, setUserData] = useState(null)
 
-  // useEffect(() => {
-  //   const checkAuth = async () => {
-  //     const token = localStorage.getItem('authToken');
-  //     if (token) {
-  //       try {
-  //         const res = await authAPI.me();
-  //         console.log('me() response:', res); 
-  //         const user = res?.user || res;
-  //         setUserData(user);
-  //         setLoggedIn(true);
-  //       } catch (error) {
-  //         console.error("Auth check failed:", error);
-  //         localStorage.removeItem('authToken');
-  //         setUserData(null);
-  //         setLoggedIn(false);
-  //       }
-  //     } else {
-  //       setUserData(null);
-  //       setLoggedIn(false);
-  //     }
-  //   };
-  //   checkAuth();
-  // }, [])
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        try {
+          const res = await authAPI.me();
+          const user = res?.user || res;
+          setUserData(user);
+          setLoggedIn(true);
+        } catch (error) {
+          console.error("Auth check failed:", error);
+          const isRateLimit = error.message?.includes("Whoa") || error.message?.includes("429") || error.message?.includes("rate limit");
+          if (!isRateLimit) {
+            // Only log out if the token is genuinely invalid (401/403), not a temporary throttle
+            localStorage.removeItem('authToken');
+            setUserData(null);
+            setLoggedIn(false);
+          } else {
+            // Rate limit: token is fine, just retry next refresh
+            setLoggedIn(false);
+          }
+        }
+      } else {
+        setLoggedIn(false);
+      }
+      setIsCheckingAuth(false);
+    };
+    checkAuth();
+  }, [])
+
+  if (isCheckingAuth) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', background: '#0e0e0e'
+      }}>
+        <div style={{
+          width: '36px', height: '36px', border: '3px solid #22c97a33',
+          borderTop: '3px solid #22c97a', borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite'
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
+  }
 
   if (!loggedIn) {
     if (authPage === 'signup') {
