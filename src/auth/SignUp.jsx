@@ -23,7 +23,7 @@ function SignUp({ setLoggedIn, setAuthPage, setUserData }) {
         setIsLoading(true);
 
         try {
-            const result = await authAPI.signup(fullName, email, password, userName);
+            const result = await authAPI.signup(fullName, email, password, userName, businessName);
             localStorage.setItem("authToken", result.authToken);
 
             const res = await authAPI.me();

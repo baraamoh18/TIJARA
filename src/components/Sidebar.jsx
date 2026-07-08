@@ -19,13 +19,14 @@ function Sidebar({ userData, onLogout }) {
     const [showAccSettings, setShowAccSettings] = useState(false);
 
     // Normalise field names — Xano may return snake_case or camelCase
-    // Falls back to the email username if no name field exists yet
-    const emailUsername = userData?.email?.split('@')[0] || null;
-    const displayName = userData?.fullName || userData?.full_name || userData?.name || emailUsername || "المستخدم";
     const displayUserName = userData?.userName || userData?.user_name || null;
-    const displayEmail = userData?.email || null;
-    const displayBusinessName=userData?.businessName||null;
-    const avatarLetter = displayName.charAt(0).toUpperCase() || "؟";
+    const displayBusinessName = userData?.businessName || userData?.business_name || null;
+    // avatarLetter: username first → business name → placeholder
+    const avatarLetter = (
+        displayUserName?.charAt(0) ||
+        displayBusinessName?.charAt(0) ||
+        "؟"
+    ).toUpperCase();
 
 
     const navigate = useNavigate();
@@ -153,11 +154,13 @@ function Sidebar({ userData, onLogout }) {
                                 </div>
                                 <div style={{ textAlign: "right", overflow: "hidden" }}>
                                     <div style={{ fontSize: "13px", fontWeight: "700", color: "#f2f2f2", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                        {displayName}
+                                        {displayUserName || "المستخدم"}
                                     </div>
-                                    <div style={{ fontSize: "11px", color: "#555", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                        {displayBusinessName?displayBusinessName:null}
-                                    </div>
+                                    {displayBusinessName && (
+                                        <div style={{ fontSize: "11px", color: "#888", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                            {displayBusinessName}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -213,13 +216,15 @@ function Sidebar({ userData, onLogout }) {
                         }}>
                             {avatarLetter}
                         </div>
-                        <div style={{ flex: 1, textAlign: "right" }}>
-                            <div style={{ fontSize: "14px", fontWeight: "700", color: "#f2f2f2" }}>
-                                {displayName}
+                        <div style={{ flex: 1, textAlign: "right", overflow: "hidden" }}>
+                            <div style={{ fontSize: "14px", fontWeight: "700", color: "#f2f2f2", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {displayUserName || "المستخدم"}
                             </div>
-                            <div style={{ fontSize: "12px", color: "#555" }}>
-                               {displayBusinessName?displayBusinessName:null}
-                            </div>
+                            {displayBusinessName && (
+                                <div style={{ fontSize: "12px", color: "#888", marginTop: "1px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {displayBusinessName}
+                                </div>
+                            )}
                         </div>
                         <span style={{
                             fontSize: "10px", color: "#555",

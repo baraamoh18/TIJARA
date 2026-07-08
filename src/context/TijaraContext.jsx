@@ -106,37 +106,40 @@ export const TijaraProvider = ({ children }) => {
 
     dispatch({ type: "FETCH_INIT" });
 
-    isFetchingPromise = Promise.all([
-      dataAPI.getProducts(),
-      dataAPI.getSales(),
-      dataAPI.getExpenses(),
-      dataAPI.getSuppliers(),
-      dataAPI.getDebts(),
-    ]);
+    const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
-    try {
-      const [productsRes, salesRes, expensesRes, suppliersRes, debtsRes] =
-        await isFetchingPromise;
+    isFetchingPromise = (async () => {
+      try {
+        // Sequential fetches — 300ms apart to avoid Xano's rate limit (10 req/20s)
+        // when combined with the auth/me call on page load
+        const productsRes  = await dataAPI.getProducts();  await delay(300);
+        const salesRes     = await dataAPI.getSales();      await delay(300);
+        const expensesRes  = await dataAPI.getExpenses();   await delay(300);
+        const suppliersRes = await dataAPI.getSuppliers();  await delay(300);
+        const debtsRes     = await dataAPI.getDebts();
 
-      dispatch({
-        type: "FETCH_SUCCESS",
-        payload: {
-          products: productsRes,
-          sales: salesRes,
-          expenses: expensesRes,
-          suppliers: suppliersRes,
-          debts: debtsRes,
-        },
-      });
-    } catch (err) {
-      dispatch({
-        type: "FETCH_FAILURE",
-        payload: err.message || "Failed to fetch data",
-      });
-      toast.error("فشل في تحميل البيانات من الخادم");
-    } finally {
-      isFetchingPromise = null;
-    }
+        dispatch({
+          type: "FETCH_SUCCESS",
+          payload: {
+            products:  productsRes,
+            sales:     salesRes,
+            expenses:  expensesRes,
+            suppliers: suppliersRes,
+            debts:     debtsRes,
+          },
+        });
+      } catch (err) {
+        dispatch({
+          type: "FETCH_FAILURE",
+          payload: err.message || "Failed to fetch data",
+        });
+        toast.error("فشل في تحميل البيانات من الخادم");
+      } finally {
+        isFetchingPromise = null;
+      }
+    })();
+
+    return isFetchingPromise;
   };
 
   useEffect(() => {
