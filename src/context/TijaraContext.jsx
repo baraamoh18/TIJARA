@@ -302,8 +302,13 @@ export const TijaraProvider = ({ children }) => {
 
   const updateDebt = async (id, updates) => {
     try {
-      await dataAPI.updateDebt(id, updates);
-      dispatch({ type: "UPDATE_DEBT", payload: { id, updates } });
+      const updatedDebt = await dataAPI.updateDebt(id, updates);
+      // Use the server's returned record so Xano-computed fields
+      // (amount, isPaid, payments) are reflected in local state immediately
+      const updatedFields =
+        updatedDebt && updatedDebt.id ? updatedDebt : updates;
+      dispatch({ type: "UPDATE_DEBT", payload: { id, updates: updatedFields } });
+      return updatedDebt;
     } catch (err) {
       console.error(err);
       toast.error("خطأ في تحديث الدين: " + (err.message || ""));
