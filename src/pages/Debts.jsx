@@ -31,10 +31,18 @@ const getDaysLeft = (dueDate) => {
   return Math.ceil((new Date(dueDate) - new Date()) / (1000 * 60 * 60 * 24));
 };
 
+// Use local timezone date (not UTC) to avoid off-by-one-day for UTC+ users
+const toLocalDateStr = (date = new Date()) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
 const defaultDueDate = () => {
   const nd = new Date();
   nd.setDate(nd.getDate() + 7);
-  return nd.toISOString().split("T")[0];
+  return toLocalDateStr(nd);
 };
 
 const getWhatsappLink = (num) => {
@@ -47,33 +55,32 @@ const getWhatsappLink = (num) => {
 };
 
 /* ─────────────────────────────────────────────
-   EXTRA DEBT DATA (local-only, NOT synced with Xano)
-   Xano's `debt` table only has debtorName/amount/isPaid/dueDate.
-   We keep contact info, address, description, originalAmount, 
-   and payment installment logs locally in localStorage.
+   CONTACT INFO (local-only, NOT synced with Xano)
+   We keep phone, whatsapp, address, description locally.
+   Payment history is now stored in Xano's `payments` JSON field.
    ───────────────────────────────────────────── */
-const EXTRA_KEY = "tijara_debt_extra";
+const CONTACT_KEY = "tijara_debt_contacts";
 
-const getAllExtra = () => {
+const getAllContacts = () => {
   try {
-    return JSON.parse(localStorage.getItem(EXTRA_KEY) || "{}");
+    return JSON.parse(localStorage.getItem(CONTACT_KEY) || "{}");
   } catch {
     return {};
   }
 };
 
-const getExtra = (id) => getAllExtra()[id] || null;
+const getContact = (id) => getAllContacts()[id] || null;
 
-const saveExtra = (id, data) => {
-  const all = getAllExtra();
+const saveContact = (id, data) => {
+  const all = getAllContacts();
   all[id] = data;
-  localStorage.setItem(EXTRA_KEY, JSON.stringify(all));
+  localStorage.setItem(CONTACT_KEY, JSON.stringify(all));
 };
 
-const removeExtra = (id) => {
-  const all = getAllExtra();
+const removeContact = (id) => {
+  const all = getAllContacts();
   delete all[id];
-  localStorage.setItem(EXTRA_KEY, JSON.stringify(all));
+  localStorage.setItem(CONTACT_KEY, JSON.stringify(all));
 };
 
 /* ─────────────────────────────────────────────
@@ -130,14 +137,12 @@ export default function Debts() {
     const newDebt = await contextAddDebt(debtData);
 
     if (newDebt && newDebt.id) {
-      // Save contact details, address, description, original amount and payments list locally
-      saveExtra(newDebt.id, {
+      // Save contact details locally — payment history is handled by Xano
+      saveContact(newDebt.id, {
         phone: phone.trim(),
         whatsapp: whatsapp.trim(),
         address: address.trim(),
         description: description.trim(),
-        originalAmount: amt,
-        payments: [],
       });
     }
 
@@ -174,39 +179,22 @@ export default function Debts() {
 
     setCollectingId(collectingDebt.id);
     try {
-      const extra = getExtra(collectingDebt.id) || {};
-      const originalAmount = extra.originalAmount || collectingDebt.amount;
-      const payments = extra.payments || [];
-
-      // Record this installment payment
-      const newPayment = {
-        amount: paidAmt,
-        date: new Date().toISOString().split("T")[0],
-        method: collectMethod,
-      };
-
-      const updatedPayments = [...payments, newPayment];
-      const totalPaid = updatedPayments.reduce((sum, p) => sum + p.amount, 0);
-      const remaining = Math.max(0, originalAmount - totalPaid);
-      const isPaid = remaining <= 0;
-
-      // Update backend via Xano
-      await contextUpdateDebt(collectingDebt.id, {
-        debtorName: collectingDebt.debtorName,
-        amount: remaining,
+      // Send a single payment object — Xano handles balance reduction,
+      // isPaid flag, and appending to the payments array server-side.
+      // dueDate is included because Xano's endpoint requires it as an input.
+      const updatedDebt = await contextUpdateDebt(collectingDebt.id, {
         dueDate: collectingDebt.dueDate,
-        isPaid: isPaid,
-      });
-
-      // Update local storage
-      saveExtra(collectingDebt.id, {
-        ...extra,
-        payments: updatedPayments,
+        payment: {
+          amount: paidAmt,
+          payment_date: toLocalDateStr(),
+          payment_method: collectMethod,
+        },
       });
 
       setCollectOpen(false);
 
-      if (isPaid) {
+      const isNowPaid = updatedDebt?.isPaid || false;
+      if (isNowPaid) {
         toast.success(`✅ تم سداد دين ${collectingDebt.debtorName} بالكامل (${collectMethod})`);
       } else {
         toast.success(`✅ تم تسجيل سداد دفعة بقيمة ${fmt(paidAmt)} ج لـ ${collectingDebt.debtorName}`);
@@ -222,7 +210,7 @@ export default function Debts() {
   const handleDelete = async (id) => {
     if (!window.confirm("هتمسح الدين ده؟")) return;
     await contextDeleteDebt(id);
-    removeExtra(id);
+    removeContact(id);
   };
 
   if (isLoading) {
@@ -418,13 +406,13 @@ export default function Debts() {
           </div>
         ) : (
           unpaid.map((d) => {
-            const extra = getExtra(d.id);
-            const payments = extra?.payments || [];
+            const extra = getContact(d.id);
+            // Payments now come directly from Xano's payments field
+            const payments = d.payments || [];
             const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-            // originalAmount is saved at debt creation time — never changes
-            // d.amount from Xano is already reduced after partial payments, so we can't trust it as "original"
-            const original = extra?.originalAmount || (d.amount + totalPaid);
-            const rem = Math.max(0, original - totalPaid);
+            // d.amount is the current remaining balance; original = remaining + all paid
+            const original = d.amount + totalPaid;
+            const rem = d.amount;
             const od = isOverdue(d);
             const daysLeft = getDaysLeft(d.dueDate);
 
@@ -515,8 +503,8 @@ export default function Debts() {
                       <div className="debts-payments-title">سجل دفعات السداد:</div>
                       {payments.map((p, idx) => (
                         <div key={idx} className="debts-payment-item">
-                          <span>{fmt(p.amount)} ج ({p.method})</span>
-                          <span>{p.date}</span>
+                          <span>{fmt(p.amount)} ج ({p.payment_method || p.method})</span>
+                          <span>{p.payment_date || p.date}</span>
                         </div>
                       ))}
                     </div>
@@ -575,14 +563,15 @@ export default function Debts() {
               <br />
               المبلغ المتبقي الحالي: {fmt(collectingDebt.amount || 0)} جنيه
               {(() => {
-                const extra = getExtra(collectingDebt.id);
-                if (extra && extra.originalAmount > collectingDebt.amount) {
-                  const paid = extra.originalAmount - collectingDebt.amount;
+                const prevPayments = collectingDebt.payments || [];
+                const totalPreviouslyPaid = prevPayments.reduce((sum, p) => sum + p.amount, 0);
+                const originalAmount = collectingDebt.amount + totalPreviouslyPaid;
+                if (totalPreviouslyPaid > 0) {
                   return (
                     <>
                       <br />
                       <span className="debts-modal-summary-note">
-                        (إجمالي الدين الأصلي: {fmt(extra.originalAmount)} ج · إجمالي المسدد سابقاً: {fmt(paid)} ج)
+                        (إجمالي الدين الأصلي: {fmt(originalAmount)} ج · إجمالي المسدد سابقاً: {fmt(totalPreviouslyPaid)} ج)
                       </span>
                     </>
                   );
