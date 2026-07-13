@@ -253,6 +253,10 @@
   font-weight: normal;
   padding: 12px 16px;
   border-bottom: 1px solid #222;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: #161616;
 }
 
 .sales-table td {

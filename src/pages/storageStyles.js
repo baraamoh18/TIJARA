@@ -28,6 +28,9 @@ const thStyles = {
     color: "#888",
     fontSize: "17px",
     fontWeight: "600",
-    letterSpacing: "0.5px"
+    letterSpacing: "0.5px",
+    position: "sticky",
+    top: 0,
+    zIndex: 2,
 }
 export { thStyles, generalStyles, inputStyle, buttonColor }

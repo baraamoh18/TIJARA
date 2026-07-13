@@ -170,7 +170,7 @@ function ProfitLoss() {
                         <thead>
                             <tr>
                                 {["المنتج", "كمية مباعة", "الإيراد", "الربح", "الهامش"].map(h => (
-                                    <th key={h} style={{ ...thStyles, backgroundColor: "transparent", borderBottom: "1px solid #1f1f1f", padding: "16px", position: "sticky", top: 0 }}>{h}</th>
+                                    <th key={h} style={{ ...thStyles, backgroundColor: "#0f0f0f", borderBottom: "1px solid #1f1f1f", padding: "16px", position: "sticky", top: 0, zIndex: 2 }}>{h}</th>
                                 ))}
                             </tr>
                         </thead>

@@ -5,21 +5,8 @@ import "./Report.css";
 
 const fmt = (n) => Math.round(n || 0).toLocaleString("ar-EG");
 
-// Debt collections are tracked locally by Debts.jsx (Xano's `sale` table
-// requires a real product_id that a collection doesn't have), so we read
-// them here and fold them into today's revenue/profit.
-const COLLECTIONS_KEY = "tijara_debt_collections";
+// فصل الديون تماماً عن التقارير المبيعات والأرباح
 
-const getTodaysCollections = () => {
-  let all = [];
-  try {
-    all = JSON.parse(localStorage.getItem(COLLECTIONS_KEY) || "[]");
-  } catch {
-    all = [];
-  }
-  const todayStr = new Date().toISOString().split("T")[0];
-  return all.filter((c) => c.date === todayStr);
-};
 
 function Report() {
   const { state } = useTijara();
@@ -82,32 +69,9 @@ function Report() {
 
     const prft = rev - cst;
 
-    // تحصيلات الديون اليوم (مسجلة محليًا من صفحة الديون) — الربح الحقيقي هو
-    // المبلغ ناقص تكلفة المنتج الفعلية (المحفوظة وقت تسجيل الدين)، مش المبلغ
-    // كامل كإيراد بهامش 100%
-    const todaysCollections = getTodaysCollections();
-    const debtCollectionsTotal = todaysCollections.reduce(
-      (s, c) => s + (c.amount || 0),
-      0,
-    );
-    const debtCollectionsCost = todaysCollections.reduce(
-      (s, c) => s + (c.cost || 0),
-      0,
-    );
-
-    todaysCollections.forEach((col, idx) => {
-      const key = `debt-collection-${idx}`;
-      byProduct[key] = {
-        name: col.productName || `تحصيل دين: ${col.debtorName}`,
-        qty: 1,
-        revenue: col.amount || 0,
-        profit: (col.amount || 0) - (col.cost || 0),
-      };
-    });
-
-    const finalRevenue = rev + debtCollectionsTotal;
-    const finalCost = cst + debtCollectionsCost;
-    const finalProfit = prft + (debtCollectionsTotal - debtCollectionsCost);
+    const finalRevenue = rev;
+    const finalCost = cst;
+    const finalProfit = prft;
     const mrg = finalRevenue > 0 ? Math.round((finalProfit / finalRevenue) * 100) : 0;
 
     // المصروفات (كل المصروفات المسجلة، زي الأصل بالظبط)
@@ -132,7 +96,7 @@ function Report() {
       netAfterExpenses: netFinal,
       soldProducts: soldProductsArr,
       lowStockProducts: lowProds,
-      debtCollectionsTotal,
+      debtCollectionsTotal: 0,
     };
   }, [sales, expenses, products]);
 

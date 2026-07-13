@@ -102,16 +102,19 @@ function Suppliers() {
     const thCustomStyle = {
         fontSize: '11px',
         fontWeight: '700',
-        color: '#505050', // var(--text3)
+        color: '#505050',
         textAlign: 'right',
         padding: '12px 14px',
-        borderBottom: '1px solid #ffffff10', // var(--border)
+        borderBottom: '1px solid #ffffff10',
         letterSpacing: '0.03em',
         textTransform: 'uppercase',
-        backgroundColor: '#111111', // var(--bg1)
+        backgroundColor: '#111111',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
+        position: 'sticky',
+        top: 0,
+        zIndex: 2,
     };
 
     const tdCustomStyle = (isHovered, isLast) => ({

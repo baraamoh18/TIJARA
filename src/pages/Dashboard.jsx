@@ -127,7 +127,7 @@ const Dashboard = () => {
 
         <div className="summary-card red-border">
           <div className="card-header">
-            <span className="card-title">ديون لم تسدد</span>
+            <span className="card-title">ديون مستحقة للتجار</span>
           </div>
           <h2 className="card-value red-text">- {(totalDebts || 0).toLocaleString()} <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>جنيه</span></h2>
           <p className="card-subtitle" style={{ color: totalDebts > 0 ? '#eab308' : '#666', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -149,7 +149,7 @@ const Dashboard = () => {
         )}
         {totalDebts > 0 && (
           <div className="banner red">
-            <span>🔴 يوجد ديون غير مسددة — <Link to="/debts" className="banner-link" style={{ color: '#ef4444' }}>اضغط هنا للتفاصيل</Link></span>
+            <span>🔴 يوجد ديون مستحقة للتجار — <Link to="/debts" className="banner-link" style={{ color: '#ef4444' }}>اضغط هنا للتفاصيل</Link></span>
           </div>
         )}
       </div>

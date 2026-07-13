@@ -3,7 +3,10 @@ function Header({ title, buttonText, onButtonClick, extraContent }) {
     return (
         <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: "20px 28px", borderBottom: "1px solid #1a1a1a", flexDirection: "row-reverse"
+            padding: "20px 28px", borderBottom: "1px solid #1a1a1a", flexDirection: "row-reverse",
+            position: "sticky", top: 0, zIndex: 10,
+            backgroundColor: "#161616",
+            backdropFilter: "blur(8px)",
         }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 {buttonText && <button onClick={onButtonClick} style={{

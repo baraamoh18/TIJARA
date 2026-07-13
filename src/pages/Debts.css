@@ -347,3 +347,64 @@
   margin-top: 18px;
   justify-content: flex-end;
 }
+
+/* ── NEW STYLES FOR CLIENT INFO & PAYMENT HISTORY ── */
+.debts-debt-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text2, #909090);
+}
+.debts-debt-details-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.debts-debt-details-link {
+  color: var(--green, #1fd97a);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.debts-debt-details-link:hover {
+  text-decoration: underline;
+}
+.debts-debt-desc {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--bg3, #222);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text1, #f0f0f0);
+  border-right: 3px solid var(--green, #1fd97a);
+  line-height: 1.5;
+}
+.debts-payments-history {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border2, #ffffff1e);
+  width: 100%;
+}
+.debts-payments-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2, #909090);
+  margin-bottom: 6px;
+}
+.debts-payment-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text1, #f0f0f0);
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+.debts-payment-item span:first-child {
+  font-weight: 700;
+  color: var(--green, #1fd97a);
+}
