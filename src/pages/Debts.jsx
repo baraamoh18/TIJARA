@@ -31,10 +31,18 @@ const getDaysLeft = (dueDate) => {
   return Math.ceil((new Date(dueDate) - new Date()) / (1000 * 60 * 60 * 24));
 };
 
+// Use local timezone date (not UTC) to avoid off-by-one-day for UTC+ users
+const toLocalDateStr = (date = new Date()) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
 const defaultDueDate = () => {
   const nd = new Date();
   nd.setDate(nd.getDate() + 7);
-  return nd.toISOString().split("T")[0];
+  return toLocalDateStr(nd);
 };
 
 const getWhatsappLink = (num) => {
@@ -178,7 +186,7 @@ export default function Debts() {
         dueDate: collectingDebt.dueDate,
         payment: {
           amount: paidAmt,
-          payment_date: new Date().toISOString().split("T")[0],
+          payment_date: toLocalDateStr(),
           payment_method: collectMethod,
         },
       });
