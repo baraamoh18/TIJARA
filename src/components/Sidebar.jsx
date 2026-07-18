@@ -40,9 +40,9 @@ function Sidebar({ onLogout }) {
     }, []);
 
     // Normalise field names — Xano may return snake_case or camelCase
-    const displayUserName = userData?.userName || userData?.user_name || null;
-    const displayBusinessName = userData?.businessName || userData?.business_name || null;
-    const displayPicture = userData?.picture || null;
+    const displayUserName = user?.userName || user?.user_name || null;
+    const displayBusinessName = user?.businessName || user?.business_name || null;
+    const displayPicture = user?.picture || null;
     // avatarLetter: username first → business name → placeholder
     const avatarLetter = (
         displayUserName?.charAt(0) ||
