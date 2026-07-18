@@ -15,6 +15,7 @@ import ProfitLoss from './pages/ProfitLoss'
 
 import { TijaraProvider } from './context/TijaraContext'
 import { Toaster } from 'react-hot-toast'
+import CompleteProfile from './auth/CompleteProfile'
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(false)
@@ -75,6 +76,16 @@ function App() {
     } else {
       return <LogIn setLoggedIn={setLoggedIn} setAuthPage={setAuthPage} setUserData={setUserData} />
     }
+  }
+
+  // Show onboarding if the user logged in via Google and hasn't set userName / businessName yet
+  // Uses .trim() to treat empty strings the same as null (Xano may return "" for unset fields)
+  const hasUserName = !!(userData?.userName?.trim() || userData?.user_name?.trim());
+  const hasBusinessName = !!(userData?.businessName?.trim() || userData?.business_name?.trim());
+  const needsOnboarding = loggedIn && (!hasUserName || !hasBusinessName);
+
+  if (needsOnboarding) {
+    return <CompleteProfile userData={userData} setUserData={setUserData} />
   }
 
   return (
